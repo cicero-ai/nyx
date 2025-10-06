@@ -8,12 +8,15 @@ use super::{BaseDbFunctions, BaseDbItem};
 use crate::Error;
 use crate::rpc::{CmdResponse, message};
 use bincode::{Decode, Encode};
-use fuser::{FileAttr, FileType};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
-use std::time::{Duration, UNIX_EPOCH};
 use zeroize::Zeroize;
+
+#[cfg(all(unix, feature = "fuse"))]
+use fuser::{FileAttr, FileType};
+#[cfg(all(unix, feature = "fuse"))]
+use std::time::{Duration, UNIX_EPOCH};
 
 #[derive(Encode, Decode)]
 pub struct SshKeysDb {
@@ -229,6 +232,7 @@ impl SshKeysDb {
         }
     }
 
+    #[cfg(all(unix, feature = "fuse"))]
     /// Get attributes for file system
     pub fn get_attr(&self, ino: u64) -> Option<FileAttr> {
         let ts = UNIX_EPOCH + Duration::from_secs(1609459200); // Jan 1, 2021

@@ -20,7 +20,7 @@ mod daemon;
 pub mod launcher;
 pub mod message;
 
-#[cfg(unix)]
+#[cfg(all(unix, feature = "fuse"))]
 pub mod fs_launcher;
 
 /// Send request

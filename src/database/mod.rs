@@ -5,6 +5,7 @@
 // MIT License text: https://opensource.org/licenses/MIT
 
 pub use self::base::{BaseDbFunctions, BaseDbItem};
+#[cfg(all(unix, feature = "fuse"))]
 pub use self::fs::NyxFs;
 pub use self::history::{HistoryAction, HistoryDataType, HistoryDb, HistoryItem};
 pub use self::loader::LoaderResponse;
@@ -16,6 +17,7 @@ pub use self::strings::{StrItem, StringsDb};
 pub use self::users::{User, UsersDb};
 
 mod base;
+#[cfg(all(unix, feature = "fuse"))]
 mod fs;
 mod history;
 pub mod loader;
