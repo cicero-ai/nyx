@@ -12,7 +12,7 @@ use crate::Error;
 pub fn copy(text: &str) -> Result<(), Error> {
 
     // Get available tools to try
-    let mut _tools = vec![];
+    let mut _tools: Vec<(&str, Vec<&str>)> = vec![];
 
     #[cfg(target_os = "linux")]
     {
