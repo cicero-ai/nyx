@@ -12,7 +12,9 @@ use falcon_cli::*;
 use std::convert::TryInto;
 use std::fs::OpenOptions;
 use std::net::{SocketAddr, TcpStream};
-use std::process::{Command, Stdio, exit};
+use std::process::{Command, exit};
+#[cfg(not(target_os="windows"))]
+use std::process::Stdio;
 use std::sync::Arc;
 use std::time::Duration;
 use std::{env, thread};
