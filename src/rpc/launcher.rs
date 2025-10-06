@@ -54,7 +54,7 @@ pub fn launch(dbfile: &str, n_password: [u8; 32]) -> Result<(), Error> {
     // Base64
     let hashed_password = general_purpose::STANDARD.encode(n_password);
 
-    #[cfg(all(unix, feature = "fuse"))]
+    #[cfg(any(target_os="linux", feature = "fuse"))]
     // Check for unmount
     {
         if super::fs_launcher::is_mount_point(&CONFIG.fuse_mount_dir) {
@@ -195,7 +195,7 @@ pub fn launch(dbfile: &str, n_password: [u8; 32]) -> Result<(), Error> {
     }
 
     // Checj fuse point
-    #[cfg(all(unix, feature = "fuse"))]
+    #[cfg(any(target_os="linux", feature = "fuse"))]
     {
         super::fs_launcher::check_mount_successful();
     }

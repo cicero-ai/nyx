@@ -4,7 +4,7 @@
 ![Build](https://img.shields.io/github/actions/workflow/status/cicero-ai/nyx/ci.yml)
 ![Downloads](https://img.shields.io/github/downloads/cicero-ai/nyx/total)
 
-# Nyx
+# Nyx - Secure Password, OTP and SSH Keys Management
 
 Secure command line utility to manage passwords, authenticator app OTP codes, SSH keys, and notes.
 
@@ -26,12 +26,13 @@ Simplistic, out of the way, yet always accessible and just works.
 
 Download Binary: https://github.com/cicero-ai/nyx/releases/tag/v1.0.0
 
-Rust / Cargo:  `cargo install nyxpass`  (installs 'nyx' binary)
+Rust / Cargo:  cargo install nyxpass  (installs 'nyx' binary)
 
 Homebrew:  [coming]
 
 **Mac Users:** To enable fuse point with SSH keys, you must install [MacFUSE](https://macfuse.github.io/) v10.9 or later.  
 If using Apple Silicon, you must also enable support for third party kernel extensions.
+If installing via cargo without MacFUSE, run: cargo install --no-default-features
 
 
 ## Quick Start
@@ -40,10 +41,11 @@ Check installation:
     `nyx --version`
 
 No setup required, you'll be prompted to create database during first write.  Looks for database files in this order:
-    - -f or --dbfile CLI flags
-    - NYX_DBFILE environment variable
-    - ~/.local/share/nyx/nyx.db
-    - Prompts for location
+
+* -f or --dbfile CLI flags
+* NYX_DBFILE environment variable
+* ~/.local/share/nyx/nyx.db
+* Prompts for location
 
 
 **Common Commands**

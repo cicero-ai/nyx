@@ -13,9 +13,9 @@ use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
 use zeroize::Zeroize;
 
-#[cfg(all(unix, feature = "fuse"))]
+#[cfg(any(target_os="linux", feature = "fuse"))]
 use fuser::{FileAttr, FileType};
-#[cfg(all(unix, feature = "fuse"))]
+#[cfg(any(target_os="linux", feature = "fuse"))]
 use std::time::{Duration, UNIX_EPOCH};
 
 #[derive(Encode, Decode)]
@@ -232,7 +232,7 @@ impl SshKeysDb {
         }
     }
 
-    #[cfg(all(unix, feature = "fuse"))]
+    #[cfg(any(target_os="linux", feature = "fuse"))]
     /// Get attributes for file system
     pub fn get_attr(&self, ino: u64) -> Option<FileAttr> {
         let ts = UNIX_EPOCH + Duration::from_secs(1609459200); // Jan 1, 2021

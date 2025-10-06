@@ -20,13 +20,13 @@ use tokio::io::AsyncWriteExt;
 use tokio::net::TcpListener;
 use tokio::task;
 
-#[cfg(all(unix, feature = "fuse"))]
+#[cfg(any(target_os="linux", feature = "fuse"))]
 use fuser::BackgroundSession;
 
 pub struct RpcDaemon {
     pub nyxdb: Arc<Mutex<NyxDb>>,
     pub session: Mutex<RpcSession>,
-    #[cfg(all(unix, feature = "fuse"))]
+    #[cfg(any(target_os="linux", feature = "fuse"))]
     pub fuse_point: Mutex<Option<BackgroundSession>>,
 }
 
@@ -45,14 +45,14 @@ impl RpcDaemon {
         Self {
             session: Mutex::new(RpcSession::new(&nyxdb, dbfile, n_password)),
             nyxdb: Arc::new(Mutex::new(nyxdb)),
-            #[cfg(all(unix, feature = "fuse"))]
+            #[cfg(any(target_os="linux", feature = "fuse"))]
             fuse_point: Mutex::new(None),
         }
     }
 
     /// Start the daemon
     pub async fn start(self: Arc<Self>) -> Result<(), Error> {
-        #[cfg(all(unix, feature = "fuse"))]
+        #[cfg(any(target_os="linux", feature = "fuse"))]
         // Mount fuse point
         {
             if let Err(e) = super::fs_launcher::mount(&self) {
