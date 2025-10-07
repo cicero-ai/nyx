@@ -43,7 +43,7 @@ If using Apple Silicon, you must also enable support for third party kernel exte
 Pre-compiled Mac binaries do not have fuse support.  If installing via cargo with MacFUSE, run: 
 ```bash
 cargo install --features fuse
-~~~
+```
 
 
 ## Quick Start
