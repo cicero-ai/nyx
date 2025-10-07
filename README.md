@@ -4,18 +4,18 @@
 ![Build](https://img.shields.io/github/actions/workflow/status/cicero-ai/nyx/ci.yml)
 ![Downloads](https://img.shields.io/github/downloads/cicero-ai/nyx/total)
 
-# Nyx - Secure Password, OTP and SSH Keys Management
+# Nyx
 
 Secure command line utility to manage passwords, authenticator app OTP codes, SSH keys, and notes.
 
 ## Features
 
 * Simple non-interactive CLI command with time based locking of database based on inactivity.
-* Seamless category support with forward slashes (ie. 'nyx new mysite/cloudflare', 'nyx ls mysite')
-* Passwords always securely available, instantly copied to clipboard (ie. `nyx xp mysite/cloudflare`, `nyx xu mysite/cloudflare`)
-* Create authenticator app entry with Base32 secret, instantly generate 6 digit OTP auth codes (ie. `nyx otp site-name`)
+* Seamless category support with forward slashes (ie. nyx new mysite/cloudflare, nyx ls mysite)
+* Passwords always securely available, instantly copied to clipboard (ie. nyx xp mysite/cloudflare)
+* Create authenticator app entry with Base32 secret, instantly generate 6 digit OTP auth codes (ie. nyx otp site-name)
 * SSH keys available via virtual fuse point filesystem (Linux / Mac only).  Import SSH keys, modify IdentityFile parameter in ~/.ssh/config file to point to /tmp/nyx/ssh_keys/<NAME>.
-* Create and manage notes with default text editor (vi, namo, etc.) (ie. `nyx note new some-title`)
+* Create and manage notes with default text editor (vi, namo, etc.) (ie. nyx note new some-title)
 * AES-GCM, Argon2, hkdf, auto-clearing of clipboard every 120 seconds.
 * Supports multiple databases and localhost RPC API.
 
@@ -26,19 +26,31 @@ Simplistic, out of the way, yet always accessible and just works.
 
 Download Binary: https://github.com/cicero-ai/nyx/releases/tag/v1.0.0
 
-Rust / Cargo:  cargo install nyxpass  (installs 'nyx' binary)
+cargo (Rust - installs 'nyx' binary):
+```bash
+cargo install nyxpass
+```
 
-Homebrew:  [coming]
+Homebrew (no fuse support):
+```bash
+brew tap cicero-ai/homebrew-tools
+brew install nyxpass
+```
+
 
 **Mac Users:** To enable fuse point with SSH keys, you must install [MacFUSE](https://macfuse.github.io/) v10.9 or later.  
 If using Apple Silicon, you must also enable support for third party kernel extensions.
-If installing via cargo without MacFUSE, run: cargo install --no-default-features
+Pre-compiled Mac binaries do not have fuse support.  If installing via cargo with MacFUSE, run: 
+```bash
+cargo install --features fuse
+~~~
 
 
 ## Quick Start
 
 Check installation: 
     `nyx --version`
+
 
 No setup required, you'll be prompted to create database during first write.  Looks for database files in this order:
 
