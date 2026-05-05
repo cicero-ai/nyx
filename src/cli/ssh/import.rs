@@ -58,7 +58,6 @@ impl CliCommand for CliSshKeyImport {
         // Instantiate item
         let ssh_key = SshKey {
             display_name: req.args[0].to_string(),
-            ino: 0,
             host,
             port: port.parse::<u16>()?,
             username,
@@ -86,8 +85,8 @@ impl CliCommand for CliSshKeyImport {
     fn help(&self) -> CliHelpScreen {
         let mut help = CliHelpScreen::new(
             "Import SSH Key",
-            "nyx ssh import <NAME> -- file <PEM_FILE>",
-            "Imports a new SSH key, which is then available as the IdentityFile paramter in your ~/.ssh/config file at: /tmp/nyx/ssh_keys/<NAME>, or the virtual directory you specified during database creation.",
+            "nyx ssh import <NAME> --file <PEM_FILE>",
+            "Imports a SSH key"
         );
 
         help.add_param(

@@ -14,6 +14,7 @@ use hkdf::Hkdf;
 use sha2::{Digest, Sha256};
 use std::convert::TryInto;
 use std::fs;
+use zeroize::Zeroize;
 
 const PREFIX: u8 = 0x43;
 const VERSION: u8 = 0x01;
@@ -30,6 +31,7 @@ pub fn encrypt(message: &[u8], password: [u8; 32]) -> Result<Vec<u8>, Error> {
     // Encrypt
     let output = encrypt_with_master_key(message, password, encryption_key)?;
 
+    encryption_key.zeroize();
     Ok(output)
 }
 
@@ -56,8 +58,8 @@ pub fn encrypt_with_master_key(
     rng.fill_bytes(&mut password_iv);
 
     // Derive child / specific message encryption key
-    let (argon_hash, salt) = argon2_hash(&password, None)?;
-    let (child_key, nonce) = derive_key(&argon_hash, None)?;
+    let (mut argon_hash, salt) = argon2_hash(&password, None)?;
+    let (mut child_key, nonce) = derive_key(&argon_hash, None)?;
 
     // Encrypt outer seal
     let outer_key = Key::<Aes256Gcm>::from(child_key);
@@ -65,6 +67,10 @@ pub fn encrypt_with_master_key(
     let encrypted_full_key = outer_cipher
         .encrypt(&password_iv.into(), master_key.as_ref())
         .map_err(|e| Error::Crypto(e.to_string()))?;
+
+    // Zeroize intermediate key material
+    argon_hash.zeroize();
+    child_key.zeroize();
 
     // Put it all together
     let mut header = vec![PREFIX, VERSION];
@@ -86,7 +92,7 @@ pub fn _encrypt_with_str(message: &[u8], password: &str) -> Result<Vec<u8>, Erro
 /// Returns the plaintext or an error if the prefix, version, or password is invalid.
 pub fn decrypt(payload: &[u8], password: [u8; 32]) -> Result<Vec<u8>, Error> {
     // Extract master key
-    let (iv, msg_key) = extract_master_key(payload, password)?;
+    let (iv, mut msg_key) = extract_master_key(payload, password)?;
 
     // Decrypt message
     let msg_cipher = Aes256Gcm::new(&msg_key.into());
@@ -94,6 +100,7 @@ pub fn decrypt(payload: &[u8], password: [u8; 32]) -> Result<Vec<u8>, Error> {
         .decrypt(&iv.into(), payload[122..].as_ref())
         .map_err(|_| Error::Crypto("Invalid dencryption password.".to_string()))?;
 
+    msg_key.zeroize();
     Ok(message)
 }
 
@@ -121,15 +128,19 @@ pub fn extract_master_key(
     salt.copy_from_slice(&payload[106..122]);
 
     // Argon2 hash and derive child
-    let (argon_hash, _) = argon2_hash(&password, Some(salt))?;
-    let (child_key, _) = derive_key(&argon_hash, Some(nonce))?;
+    let (mut argon_hash, _) = argon2_hash(&password, Some(salt))?;
+    let (mut child_key, _) = derive_key(&argon_hash, Some(nonce))?;
     let key = Key::<Aes256Gcm>::from_slice(&child_key);
 
-    // Decrypd seal
+    // Decrypt seal
     let cipher = Aes256Gcm::new(key);
-    let inner_seal = cipher
+    let mut inner_seal = cipher
         .decrypt(&password_iv.into(), payload[2..50].as_ref())
         .map_err(|_| Error::Crypto("Invalid encryption key.".to_string()))?;
+
+    // Zeroize intermediate key material
+    argon_hash.zeroize();
+    child_key.zeroize();
 
     // Get iv and encryption key
     let mut iv: [u8; 12] = [0; 12];
@@ -137,6 +148,7 @@ pub fn extract_master_key(
     let mut msg_key: [u8; 32] = [0; 32];
     msg_key.copy_from_slice(&inner_seal[0..32]);
 
+    inner_seal.zeroize();
     Ok((iv, msg_key))
 }
 
@@ -150,10 +162,13 @@ pub fn update_existing_file(
     let encrypted_bytes = fs::read(filepath)?;
 
     // Get master key
-    let (_, master_key) = extract_master_key(&encrypted_bytes, n_password)?;
+    let (_, mut master_key) = extract_master_key(&encrypted_bytes, n_password)?;
 
     // Encrypt with password
     let bytes = encrypt_with_master_key(payload, n_password, master_key)?;
+
+    // Zeroize master key
+    master_key.zeroize();
 
     // Save file
     fs::write(filepath, &bytes)?;
@@ -200,7 +215,7 @@ fn argon2_hash(
     Ok((hash, salt))
 }
 
-// Derive child
+/// Derive child key via HKDF. Caller is responsible for zeroizing the returned child_bytes.
 fn derive_key(
     password: &[u8; 32],
     previous_nonce: Option<[u8; 32]>,
@@ -220,14 +235,19 @@ fn derive_key(
 
 /// Generates BIP-39 mnemonic words from a password-derived entropy.
 pub fn get_bip39_words(payload: &[u8], password: &str) -> Result<Vec<String>, Error> {
-    let n_password = normalize_password(password);
-    let (_, master_key) = extract_master_key(payload, n_password)?;
+    let mut n_password = normalize_password(password);
+    let (_, mut master_key) = extract_master_key(payload, n_password)?;
 
     let mnemonic = Mnemonic::from_entropy(&master_key).expect("Invalid entropy");
-    Ok(mnemonic.words().map(String::from).collect())
+    let words = mnemonic.words().map(String::from).collect();
+
+    master_key.zeroize();
+    n_password.zeroize();
+    Ok(words)
 }
 
 /// Restore from BIP39 words
+/// Restore from BIP39 words. Caller must zeroize the returned master_key when done.
 pub fn restore_from_bip39_words(
     payload: &[u8],
     phrase: &str,
@@ -244,13 +264,14 @@ pub fn restore_from_bip39_words(
     let mut iv: [u8; 12] = [0; 12];
     iv.copy_from_slice(&payload[50..62]);
 
-    // Get the master key
+    // Get the master key from mnemonic entropy
     let mnemonic = Mnemonic::parse(phrase)
         .map_err(|e| Error::Crypto(format!("Unable to convert phrase to master key: {}", e)))?;
-    let entropy: &[u8] = &mnemonic.to_entropy();
-    let master_key: [u8; 32] = entropy
+    let mut entropy_vec = mnemonic.to_entropy();
+    let master_key: [u8; 32] = entropy_vec.as_slice()
         .try_into()
         .map_err(|e| Error::Generic(format!("Unable to convert master key to 32 bytes: {}", e)))?;
+    entropy_vec.zeroize();
 
     // Decrypt message
     let msg_cipher = Aes256Gcm::new(&master_key.into());

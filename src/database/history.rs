@@ -8,15 +8,16 @@ use crate::Error;
 use crate::rpc::{CmdResponse, message};
 use bincode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
+use zeroize::{Zeroize, ZeroizeOnDrop};
 use std::fmt;
 use std::ops::{Deref, DerefMut};
 use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-#[derive(Default, Decode, Encode)]
+#[derive(Default, Decode, Encode, Zeroize, ZeroizeOnDrop)]
 pub struct HistoryDb(pub Vec<HistoryItem>);
 
-#[derive(Clone, Decode, Encode, Serialize, Deserialize)]
+#[derive(Clone, Decode, Encode, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
 pub struct HistoryItem {
     pub action: HistoryAction,
     pub data_type: HistoryDataType,
@@ -25,7 +26,7 @@ pub struct HistoryItem {
     pub timestamp: u64,
 }
 
-#[derive(Decode, Encode, Eq, PartialEq, Copy, Clone, Serialize, Deserialize, Debug)]
+#[derive(Decode, Encode, Eq, PartialEq, Clone, Serialize, Deserialize, Debug, Zeroize, ZeroizeOnDrop)]
 pub enum HistoryAction {
     Create,
     Update,
@@ -34,13 +35,14 @@ pub enum HistoryAction {
     Rename,
 }
 
-#[derive(Decode, Encode, Eq, PartialEq, Copy, Clone, Serialize, Deserialize, Debug)]
+#[derive(Decode, Encode, Eq, PartialEq, Clone, Serialize, Deserialize, Debug, Zeroize, ZeroizeOnDrop)]
 pub enum HistoryDataType {
     User,
     Otp,
     SshKey,
     StrItem,
     Note,
+    File,
 }
 
 impl HistoryDb {
@@ -126,6 +128,7 @@ impl FromStr for HistoryDataType {
             "ssh" => Ok(Self::SshKey),
             "str" => Ok(Self::StrItem),
             "note" => Ok(Self::Note),
+            "file" => Ok(Self::File),
             _ => Err(Error::Validate(format!("No history data type for: {}", s))),
         }
     }

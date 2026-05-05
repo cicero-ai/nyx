@@ -5,7 +5,7 @@
 // MIT License text: https://opensource.org/licenses/MIT
 
 use crate::cli;
-use crate::database::Oauth;
+use crate::database::Otp;
 use crate::rpc;
 use falcon_cli::*;
 
@@ -25,13 +25,13 @@ impl CliCommand for CliOtpEdit {
         cli::check_exists("otp", &req.args[0], true)?;
 
         // Get item
-        let mut otp: Oauth = rpc::send("otp.get", &vec![&req.args[0]])?;
+        let mut otp: Otp = rpc::send("otp.get", &vec![&req.args[0]])?;
 
         // Get item info
         cli_header(&format!("Edit {}", req.args[0]));
         cli_info!("Enter the new OTP information below.  Leave blank to skip a field.\n");
 
-        let secret_code = cli_get_input("Secret Code: ", "");
+        let secret_code = cli_get_password("Secret Code: ", true);
         if !secret_code.is_empty() {
             otp.secret_code = secret_code;
         }

@@ -5,25 +5,29 @@
 // MIT License text: https://opensource.org/licenses/MIT
 
 pub use self::base::{BaseDbFunctions, BaseDbItem};
+pub use self::files::{FilesDb, ProtectedFile};
 #[cfg(any(target_os="linux", feature = "fuse"))]
 pub use self::fs::NyxFs;
 pub use self::history::{HistoryAction, HistoryDataType, HistoryDb, HistoryItem};
 pub use self::loader::LoaderResponse;
 pub use self::notes::{Note, NotesDb};
 pub use self::nyxdb::{DatabaseTimeout, DbStats, NyxDb};
-pub use self::oauth::{Oauth, OauthDb};
+pub use self::otp::{Otp, OtpDb};
 pub use self::ssh_keys::{SshKey, SshKeysDb};
 pub use self::strings::{StrItem, StringsDb};
 pub use self::users::{User, UsersDb};
 
 mod base;
+pub mod file_credentials;
+mod files;
 #[cfg(any(target_os="linux", feature = "fuse"))]
 mod fs;
 mod history;
 pub mod loader;
+mod migrations;
 mod notes;
 mod nyxdb;
-mod oauth;
+mod otp;
 mod ssh_keys;
 mod strings;
 mod users;

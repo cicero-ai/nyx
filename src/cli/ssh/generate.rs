@@ -10,8 +10,9 @@ use crate::error::Error;
 use crate::rpc;
 use falcon_cli::*;
 use rand::rngs::OsRng;
-use rsa::RsaPrivateKey;
-use ssh_key::private::RsaKeypair;
+use argon2::{Argon2, Params, Version, Algorithm};
+use ssh_key::private::Ed25519Keypair;
+use ssh_key::private::Ed25519PrivateKey;
 use ssh_key::{LineEnding, PrivateKey};
 
 #[derive(Default)]
@@ -38,32 +39,28 @@ impl CliCommand for CliSshKeyGenerate {
         let password = cli_get_password("Password (optional): ", true);
         let notes = cli_get_multiline_input("Notes");
 
-        cli_send!("Generating 4096 bit private key, please be patient... ");
-        // Generate
-        let rsa_key = RsaPrivateKey::new(&mut OsRng, 4096)
-            .map_err(|e| Error::Validate(format!("Unable to generate RSA key: {}", e)))?;
-        let rsa_keypair = RsaKeypair::try_from(rsa_key)
-            .map_err(|e| Error::Validate(format!("Unable to convert to RsaKeypair: {}", e)))?;
+        // Generate key
+        let privkey = if req.has_flag("--seed") {
+            self.generate_deterministic_key()?
+        } else {
+            let ed25519_keypair = Ed25519Keypair::random(&mut OsRng);
+            PrivateKey::from(ed25519_keypair)
+        };
 
-        let privkey = PrivateKey::from(rsa_keypair);
-        let private_key = privkey.to_openssh(LineEnding::LF).map_err(|e| {
-            Error::Validate(format!(
-                "Unable to convert SSH key to OpenSSH format: {}",
-                e
-            ))
-        })?;
+        let private_key = privkey.to_openssh(LineEnding::LF)
+            .map_err(|e| Error::Validate(format!("Unable to convert SSH key to OpenSSH format: {}", e)))?;
+
         let public_key = privkey.public_key().to_openssh().map_err(|e| {
             Error::Validate(format!(
                 "Unable to convert private SSH key to public: {}",
                 e
             ))
         })?;
-        cli_send!(" done\n");
+
 
         // Instantiate item
         let ssh_key = SshKey {
             display_name: req.args[0].to_string(),
-            ino: 0,
             host,
             port: port.parse::<u16>()?,
             username,
@@ -91,12 +88,52 @@ impl CliCommand for CliSshKeyGenerate {
     fn help(&self) -> CliHelpScreen {
         let mut help = CliHelpScreen::new(
             "Generate SSH Key",
-            "nyx ssh gen <NAME>",
-            "Generates new 4096 bit RSA SSH key.",
+            "nyx ssh gen <NAME> [--seed]",
+            "Generates new SSH key.",
         );
 
         help.add_param("NAME", "Name of SSH key to generate.");
+        help.add_flag("--seed", "If present, will prompt for pass phrase / seed to generate determinisitc SSH key that can be generated again using same seed.");
         help.add_example("nyx ssh gen mysite/cloudflare");
         help
     }
 }
+
+impl CliSshKeyGenerate {
+
+    fn generate_deterministic_key(&self) -> Result<PrivateKey, Error> {
+
+        cli_sendln!("Enter the pass phrase / seed to generate the SSH key with.  In the future, you may re-generate the exact same SSH key using this pass phrase / seed.\n");
+        let passphrase = cli_get_password("Passphrase: ", false);
+        let salt  = "NyxPass_1.0";
+
+        // Configure Argon2id — tune these for your threat model
+        let params = Params::new(
+            64 * 1024,
+            3,
+            1,
+            Some(32),
+        ).map_err(|e| Error::Validate(format!("Argon2 params error: {}", e)))?;
+
+        let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
+
+        // Derive 32 bytes of key material
+        let mut seed = [0u8; 32];
+        argon2
+            .hash_password_into(
+                passphrase.as_bytes(),
+                salt.as_bytes(),
+                &mut seed,
+            )
+            .map_err(|e| Error::Validate(format!("Key derivation failed: {}", e)))?;
+
+        // Build Ed25519 keypair directly from the seed bytes
+        let private = Ed25519PrivateKey::from_bytes(&seed);
+        let keypair = Ed25519Keypair::from(private);
+        let privkey = PrivateKey::from(keypair);
+
+        Ok(privkey)
+    }
+}
+
+

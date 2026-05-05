@@ -15,11 +15,12 @@ pub struct CliStrSet {}
 impl CliCommand for CliStrSet {
     fn process(&self, req: &CliRequest) -> anyhow::Result<()> {
         // Check params
-        if req.args.len() < 2 {
+        if req.args.is_empty() {
             cli_error!("You did not specify a name for the new entry.\n");
-            cli_info!("    Usage: nyx set <NAME> <VALUE>\n");
+            cli_info!("    Usage: nyx set <NAME>\n");
             return Err(CliError::MissingParams.into());
         }
+        let value = cli_get_password("Value: ", false);
 
         // Ensure item not exists
         cli::check_exists("str", &req.args[0], false)?;
@@ -27,7 +28,7 @@ impl CliCommand for CliStrSet {
         // Instantiate item
         let item = StrItem {
             display_name: req.args[0].to_string(),
-            value: req.args[1].to_string(),
+            value: value.to_string(),
         };
 
         let item_str = serde_json::to_string(&item)
@@ -43,7 +44,7 @@ impl CliCommand for CliStrSet {
     fn help(&self) -> CliHelpScreen {
         let mut help = CliHelpScreen::new(
             "Create New String",
-            "nyx set <NAME> <VALUE>",
+            "nyx set <NAME>",
             "Creates a new string entry.",
         );
 
@@ -51,8 +52,7 @@ impl CliCommand for CliStrSet {
             "NAME",
             "Name of entry to add.  Supports directory structure (eg. category/myuser)",
         );
-        help.add_param("VALUE", "Value of the string to add.");
-        help.add_example("nyx set some-apikey abc12345apikey");
+        help.add_example("nyx set some-apikey");
         help
     }
 }

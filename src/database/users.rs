@@ -9,12 +9,12 @@ use bincode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
-use zeroize::Zeroize;
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
 #[derive(Default, Encode, Decode)]
 pub struct UsersDb(pub HashMap<String, User>);
 
-#[derive(Clone, Encode, Decode, Serialize, Deserialize)]
+#[derive(Clone, Encode, Decode, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
 pub struct User {
     pub display_name: String,
     pub username: String,
@@ -25,17 +25,6 @@ pub struct User {
 
 impl BaseDbFunctions for UsersDb {
     type Item = User;
-
-    /// Secure clear
-    fn secure_clear(&mut self) {
-        for (_, user) in self.iter_mut() {
-            user.display_name.zeroize();
-            user.username.zeroize();
-            user.password.zeroize();
-            user.url.zeroize();
-            user.notes.zeroize();
-        }
-    }
 }
 
 impl BaseDbItem for User {
@@ -66,3 +55,22 @@ impl DerefMut for UsersDb {
         &mut self.0
     }
 }
+
+impl Zeroize for UsersDb {
+    fn zeroize(&mut self) {
+        for (mut k, mut v) in self.0.drain() {
+            k.zeroize();
+            v.zeroize();
+        }
+        self.0.shrink_to_fit();
+    }
+}
+
+impl Drop for UsersDb {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+
+

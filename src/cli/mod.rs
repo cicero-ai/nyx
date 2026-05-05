@@ -11,6 +11,7 @@ use self::db::{
     CliDbBackup, CliDbChangePass, CliDbClose, CliDbCreate, CliDbHistory, CliDbOpen, CliDbRestore,
     CliDbStats,
 };
+use self::file::{CliFileList, CliFileProtect, CliFileRestore, CliFileFreeze, CliFileEdit, CliFileScan};
 use self::note::{
     CliNoteCopy, CliNoteDelete, CliNoteEdit, CliNoteFind, CliNoteList, CliNoteNew, CliNoteRename,
     CliNoteShow, CliNoteXn,
@@ -37,6 +38,7 @@ use self::test::CliTest;
 
 pub mod clipboard;
 mod db;
+mod file;
 mod note;
 mod otp;
 mod ssh;
@@ -50,7 +52,7 @@ mod test;
 pub fn boot() -> CliRouter {
     let mut router = CliRouter::new();
     router.app_name("Nyx");
-    router.version_message(&format!("Nyx v{} - Secure CLI password & key manager\nDeveloped by the Cicero Project - https://cicero.sh/latest", env!("CARGO_PKG_VERSION")));
+    router.version_message(&format!("Nyx v{} - Secure CLI password & key manager\nDeveloped by Aquila Labs - https://aquila-labs.ca/latest", env!("CARGO_PKG_VERSION")));
 
     router.global("-f", "--dbfile", true, "Location of Nyx database file.");
     router.global("-t", "--timeout", true, "Time of inactivity to lock database (eg. 3h = 3 hours, 15m = 15 minutes, 60s = 60 seconds)");
@@ -59,12 +61,6 @@ pub fn boot() -> CliRouter {
         "--cb-timeout",
         true,
         "Seconds to auto-clear clipboard, default 120.",
-    );
-    router.global(
-        "-m",
-        "--mount-dir",
-        true,
-        "Directory to mount fuse point, defaults to /tmp/nyx",
     );
     router.global("-h", "--host", true, "RPC host, defaults to 127.0.0.1");
     router.global("-p", "--port", true, "RPC port, defaults to 7924");
@@ -148,6 +144,18 @@ pub fn boot() -> CliRouter {
     router.add::<CliNoteRename>("note mv", vec!["note rename"], vec![]);
     router.add::<CliNoteShow>("note show", vec![], vec![]);
     router.add::<CliNoteXn>("note xn", vec![], vec![]);
+
+    // Files
+    #[cfg(any(target_os="linux", feature = "fuse"))]
+    {
+        router.add_category("file", "Files", "Protect sensitive credential files.");
+        router.add::<CliFileEdit>("file edit", vec![], vec![]);
+        router.add::<CliFileFreeze>("file freeze", vec!["freeze"], vec![]);
+        router.add::<CliFileList>("file list", vec!["file ls"], vec![]);
+        router.add::<CliFileProtect>("file protect", vec!["protect"], vec![]);
+        router.add::<CliFileRestore>("file restore", vec!["restore"], vec![]);
+        router.add::<CliFileScan>("file scan", vec!["scan"], vec![]);
+    }
 
     // Test utils
     #[cfg(feature="testutil")]

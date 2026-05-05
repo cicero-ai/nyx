@@ -13,20 +13,20 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
 use std::time::{SystemTime, UNIX_EPOCH};
-use zeroize::Zeroize;
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
 #[derive(Default, Encode, Decode)]
-pub struct OauthDb(pub HashMap<String, Oauth>);
+pub struct OtpDb(pub HashMap<String, Otp>);
 
-#[derive(Clone, Encode, Decode, Serialize, Deserialize)]
-pub struct Oauth {
+#[derive(Clone, Encode, Decode, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
+pub struct Otp {
     pub display_name: String,
     pub secret_code: String,
     pub url: String,
     pub recovery_keys: String,
 }
 
-impl OauthDb {
+impl OtpDb {
     /// Generate OTP code
     pub fn generate(&mut self, req_id: usize, params: &Vec<String>) -> Result<CmdResponse, Error> {
         // Get oath
@@ -47,22 +47,11 @@ impl OauthDb {
         Ok(CmdResponse::new(false, true, message::ok(req_id, otp)))
     }
 }
-
-impl BaseDbFunctions for OauthDb {
-    type Item = Oauth;
-
-    /// Secure clear
-    fn secure_clear(&mut self) {
-        for (_, item) in self.iter_mut() {
-            item.display_name.zeroize();
-            item.secret_code.zeroize();
-            item.url.zeroize();
-            item.recovery_keys.zeroize();
-        }
-    }
+impl BaseDbFunctions for OtpDb {
+    type Item = Otp;
 }
 
-impl BaseDbItem for Oauth {
+impl BaseDbItem for Otp {
     fn get_name(&self) -> String {
         self.display_name.to_string()
     }
@@ -76,16 +65,35 @@ impl BaseDbItem for Oauth {
     }
 }
 
-impl Deref for OauthDb {
-    type Target = HashMap<String, Oauth>;
+impl Deref for OtpDb {
+    type Target = HashMap<String, Otp>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl DerefMut for OauthDb {
+impl DerefMut for OtpDb {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }
+
+impl Zeroize for OtpDb {
+    fn zeroize(&mut self) {
+        for (mut k, mut v) in self.0.drain() {
+            k.zeroize();
+            v.zeroize();
+        }
+        self.0.shrink_to_fit();
+    }
+}
+
+impl Drop for OtpDb {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+
+

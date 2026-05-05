@@ -59,13 +59,14 @@ pub fn launch(dbfile: &str, n_password: [u8; 32]) -> Result<(), Error> {
     #[cfg(any(target_os="linux", feature = "fuse"))]
     // Check for unmount
     {
-        if super::fs_launcher::is_mount_point(&CONFIG.fuse_mount_dir) {
+        if super::fs_launcher::is_mount_point() {
             super::fs_launcher::unmount()?;
         }
     }
 
     // Open log file
-    let log_file = OpenOptions::new().create(true).append(true).open("nyx.log")?;
+        let log_filename = get_logfile_path();
+    let log_file = OpenOptions::new().create(true).append(true).open(&log_filename)?;
     let err_file = log_file.try_clone()?;
 
     // Get arguments
@@ -185,7 +186,7 @@ pub fn launch(dbfile: &str, n_password: [u8; 32]) -> Result<(), Error> {
 
     if !started {
         cli_error!(
-            "Unable to start Nyx daemon due to unexpected error, please check nyx.log for details."
+            "Unable to start Nyx daemon due to unexpected error, please check {} for details.", log_filename
         );
         exit(1);
     }
@@ -199,10 +200,18 @@ pub fn launch(dbfile: &str, n_password: [u8; 32]) -> Result<(), Error> {
     // Checj fuse point
     #[cfg(any(target_os="linux", feature = "fuse"))]
     {
-        super::fs_launcher::check_mount_successful();
+        //super::fs_launcher::check_mount_successful();
     }
 
     Ok(())
+}
+
+/// Get logfile path
+fn get_logfile_path() -> String {
+    if let Some(dir) = dirs::data_dir() && let Some(datadir) = dir.to_str() {
+        return format!("{}/nyx.log", datadir);
+    }
+    "nyx.log".to_string()
 }
 
 /// Ping, see if RPC daemon is online
@@ -224,24 +233,31 @@ pub fn start_daemon() -> Result<(), Error> {
     let dbfile = env::var("NYX_LAUNCH_DBFILE")
         .map_err(|e| Error::Generic(format!("Environment variable error: {}", e)))?;
 
+    // Harden process security
+    if let Err(e) = harden() {
+        cli_warn!("Process hardening warning: {}", e);
+    }
+
     // Decode base64
-    let tmp_password = general_purpose::STANDARD
+    let mut tmp_password = general_purpose::STANDARD
         .decode(&hashed_password)
         .map_err(|e| Error::Generic(format!("Base64 decode error: {}", e)))?;
-    let n_password: [u8; 32] = tmp_password.try_into().unwrap();
+    let mut n_password: [u8; 32] = tmp_password.clone().try_into().unwrap();
+
+    // Zero out base64 intermediates immediately
+    hashed_password.zeroize();
+    tmp_password.zeroize();
 
     // Load database
     let db = NyxDb::load(&dbfile, n_password)?;
 
-    // Zero out variables
-    hashed_password.zeroize();
-
     // Start runtime
     let rt = Runtime::new()?;
 
-    // Start daemon
+    // Start daemon -- n_password is copied into RpcSession.lock (Zeroizing wrapper)
     rt.block_on(async {
         let daemon = Arc::new(RpcDaemon::new(db, &dbfile, n_password));
+        n_password.zeroize();
         if let Err(e) = daemon.start().await {
             cli_error!("Unable to start RPC daemon: {}", e);
         }
@@ -249,3 +265,43 @@ pub fn start_daemon() -> Result<(), Error> {
 
     Ok(())
 }
+
+/// Harden process: umask, raise RLIMIT_MEMLOCK, disable core dumps / ptrace
+fn harden() -> Result<(), Error> {
+    #[cfg(unix)]
+    {
+        // Set umask: new files default to owner-only (0600)
+        unsafe { libc::umask(0o177); }
+
+        // Raise mlock limit to 1MB so SecureBuffer can lock secret pages in RAM
+        let limit = libc::rlimit {
+            rlim_cur: 1024 * 1024,
+            rlim_max: 1024 * 1024,
+        };
+        let ret = unsafe { libc::setrlimit(libc::RLIMIT_MEMLOCK, &limit) };
+        if ret != 0 {
+            return Err(std::io::Error::last_os_error().into());
+        }
+    }
+
+    // Disable core dumps and block ptrace attachment
+    #[cfg(target_os = "linux")]
+    {
+        let ret = unsafe { libc::prctl(libc::PR_SET_DUMPABLE, 0, 0, 0, 0) };
+        if ret != 0 {
+            return Err(std::io::Error::last_os_error().into());
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        let ret = unsafe { libc::ptrace(libc::PT_DENY_ATTACH, 0, std::ptr::null_mut(), 0) };
+        if ret != 0 {
+            return Err(std::io::Error::last_os_error().into());
+        }
+    }
+
+    Ok(())
+}
+
+

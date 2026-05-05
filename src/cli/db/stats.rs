@@ -20,7 +20,7 @@ impl CliCommand for CliDbStats {
         let data = indexmap! {
             "Db File: " => stats.dbfile.to_string(),
             "Users: " => format!("{} entries, {} dirs", stats.users.0, stats.users.1),
-            "OTP: " => format!("{} entries, {} dirs", stats.oauth.0, stats.oauth.1),
+            "OTP: " => format!("{} entries, {} dirs", stats.otp.0, stats.otp.1),
             "SSH Keys: " => format!("{} entries, {} dirs", stats.ssh_keys.0, stats.ssh_keys.1),
             "Strings: " => format!("{} entries, {} dirs", stats.strings.0, stats.strings.1),
             "Notes: " => format!("{} entries, {} dirs", stats.notes.0, stats.notes.1)

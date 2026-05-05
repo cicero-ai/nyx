@@ -6,7 +6,7 @@
 
 # Nyx
 
-Secure command line utility to manage passwords, authenticator app OTP codes, SSH keys, and notes.
+Secure command line utility to manage passwords, authenticator app OTP codes, SSH keys, notes, and protect sensitive credential files.
 
 ## Features
 
@@ -14,17 +14,19 @@ Secure command line utility to manage passwords, authenticator app OTP codes, SS
 * Seamless category support with forward slashes (ie. nyx new mysite/cloudflare, nyx ls mysite)
 * Passwords always securely available, instantly copied to clipboard (ie. nyx xp mysite/cloudflare)
 * Create authenticator app entry with Base32 secret, instantly generate 6 digit OTP auth codes (ie. nyx otp site-name)
-* SSH keys available via virtual fuse point filesystem (Linux / Mac only).  Import SSH keys, modify IdentityFile parameter in ~/.ssh/config file to point to /tmp/nyx/ssh_keys/<NAME>.
+* Built-in ssh-agent plus functionality to easily and securely import, generate and manage SSH keys. (Linux and Mac only)
 * Create and manage notes with default text editor (vi, namo, etc.) (ie. nyx note new some-title)
+* Secure sensitive credentials files behind a fuse point, allowing only specified binaries read access.
 * AES-GCM, Argon2, hkdf, auto-clearing of clipboard every 120 seconds.
-* Supports multiple databases and localhost RPC API.
+* Aargon2  parameters: memory=64MB, iterations=2, parallelism=4
+
 
 Simplistic, out of the way, yet always accessible and just works.
 
 
 ## Installation
 
-Download Binary: https://github.com/cicero-ai/nyx/releases/tag/v1.0.0
+Download Binary: https://github.com/cicero-ai/nyx/releases/tag/v1.1.0
 
 cargo (Rust - installs 'nyx' binary):
 ```bash
@@ -38,7 +40,7 @@ brew install nyxpass
 ```
 
 
-**Mac Users:** To enable fuse point with SSH keys, you must install [MacFUSE](https://macfuse.github.io/) v10.9 or later.  
+**Mac Users:** To enable fuse point with protected files, you must install [MacFUSE](https://macfuse.github.io/) v10.9 or later.  
 If using Apple Silicon, you must also enable support for third party kernel extensions.
 Pre-compiled Mac binaries do not have fuse support.  If installing via cargo with MacFUSE, run: 
 ```bash
@@ -86,27 +88,29 @@ Database | Close | `nyx close`
 &nbsp; | Backup | `nyx backup`
 &nbsp; | History Log | `nyx db history`
 
-### Additional Notes
+Files | Protect | `nyx protect config.yaml`
+&nbsp; | Freeze | `nyx freeze config.yaml 5`
+&nbsp; | Restore | `nyx restore config.yaml`
+&nbsp; | Scan All | `nyx scan`
 
-**OTP Codes:** When registering an authenticator app, you'll be provided a QR code 
-and a Base32 secret. Use the Base32 secret when creating a new OTP entry in Nyx.
-
-**SSH Keys (Linux/Mac only):** Nyx mounts a FUSE filesystem at `/tmp/nyx/ssh_keys/` 
-when you open your database. Update your `~/.ssh/config` IdentityFile paths to 
-point to `/tmp/nyx/ssh_keys/<NAME>` to keep keys encrypted while maintaining your 
-normal SSH workflow.
-
-* All data types (User, OTP, SSH, String, Note) share the same core commands (create, update, delete, copy, rename, etc.). Use `nyx help <CATEGORY>` for a full list of available commands.
+**NOTE:**  All data types (User, OTP, SSH, String, Note) share the same core commands (create, update, delete, copy, rename, etc.). Use `nyx help <CATEGORY>` for a full list of available commands.
 
 
-## Stay Updated
+###File Protection
 
-For the latest on Nyx, you can always view the latest and subscribe to the mailing list at: [https://cicero.sh/nyx](https://cicero.sh/nyx)
+Nyx helps protect against supply chain attacks by putting your sensitive credential files behind a fuse point.  Your credentials will b stored within the encrypted volume, and only available to the whitelisted binaries you specify (eg. only "aws" binary can read the AWS credential files).
 
-## Related Project
+If a binary outside of the whitelist tries to open a protected file, a desktop notification is sent plus a log added to ~/nyx_unauthorized_access.log file in your home directory.
 
-If you found this software helpful, check out [Cicero](https://cicero.sh/latest) - a self hosted AI assistant 
-focused on protecting our personal privacy in the age of AI.
-    [https://cicero.sh/latest](https://cicero.sh/latest)
+Scan your machine for known credential files and move them under protection with the command: `nyx scan`
+
+**NOTE:** This is only available to Linux and Mac users.  For Linux, it works out of the box, while Mac users need to ensure MacFuse is installed.
+
+
+## About the Developer
+
+Nyx is developed by [Aquila Labs](https://aquila-labs.ca/), a Canadian firm that prides itself on quality,  self hosted, privacy focused software.
+
+Cicero is the main and ongoing project: https://cicero.sh/r/manifesto
 
 

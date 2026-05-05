@@ -5,7 +5,7 @@
 // MIT License text: https://opensource.org/licenses/MIT
 
 use crate::cli;
-use crate::database::Oauth;
+use crate::database::Otp;
 use crate::rpc;
 use falcon_cli::*;
 
@@ -25,7 +25,7 @@ impl CliCommand for CliOtpShow {
         cli::check_exists("otp", &req.args[0], true)?;
 
         // Get item
-        let otp: Oauth = rpc::send("otp.get", &vec![&req.args[0]])?;
+        let otp: Otp = rpc::send("otp.get", &vec![&req.args[0]])?;
 
         // Get vector
         let data = indexmap! {

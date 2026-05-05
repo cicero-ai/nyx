@@ -23,8 +23,6 @@ where
 {
     type Item;
 
-    fn secure_clear(&mut self);
-
     /// Add new item
     fn add_item(&mut self, req_id: usize, params: &Vec<String>) -> Result<CmdResponse, Error> {
         if params.is_empty() {

@@ -5,7 +5,7 @@
 // MIT License text: https://opensource.org/licenses/MIT
 
 use crate::cli;
-use crate::database::Oauth;
+use crate::database::Otp;
 use crate::rpc;
 use falcon_cli::*;
 
@@ -27,12 +27,12 @@ impl CliCommand for CliOtpNew {
         // Get item info
         cli_header("Create New OTP Entry");
         cli_info!("Enter the new OTP information below.  Leave blank to omit a field.\n");
-        let secret_code = cli_get_input("Secret Code: ", "");
+        let secret_code = cli_get_password("Secret Code: ", false);
         let url = cli_get_input("URL: ", "");
         let recovery_keys = cli_get_multiline_input("Recovery Keys");
 
         // Instantiate item
-        let otp = Oauth {
+        let otp = Otp {
             display_name: req.args[0].to_string(),
             secret_code,
             url,

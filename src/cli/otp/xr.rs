@@ -5,7 +5,7 @@
 // MIT License text: https://opensource.org/licenses/MIT
 
 use crate::cli::{self, clipboard};
-use crate::database::Oauth;
+use crate::database::Otp;
 use crate::rpc;
 use falcon_cli::*;
 
@@ -25,7 +25,7 @@ impl CliCommand for CliOtpXr {
         cli::check_exists("otp", &req.args[0], true)?;
 
         // Get entry
-        let otp: Oauth = rpc::send("otp.get", &vec![&req.args[0], &"1".to_string()])?;
+        let otp: Otp = rpc::send("otp.get", &vec![&req.args[0], &"1".to_string()])?;
 
         // Copy to clipboard
         clipboard::copy(&otp.recovery_keys)?;

@@ -4,8 +4,9 @@
 // Apache License text: https://www.apache.org/licenses/LICENSE-2.0
 // MIT License text: https://opensource.org/licenses/MIT
 
-pub use self::daemon::RpcDaemon;
+pub use self::daemon::{RpcDaemon, RpcTimer, TIMERS};
 pub use self::message::{CmdResponse, RpcRequest, RpcResponse};
+pub use self::ssh_agent::SshAgentDaemon;
 use crate::database::loader;
 use crate::{CONFIG, Error};
 use atlas_http::{HttpBody, HttpClient, HttpRequest};
@@ -19,8 +20,9 @@ use std::process::exit;
 mod daemon;
 pub mod launcher;
 pub mod message;
+mod ssh_agent;
 
-#[cfg(any(target_os="linux", feature = "fuse"))]
+//#[cfg(any(target_os="linux", feature = "fuse"))]
 pub mod fs_launcher;
 
 /// Send request

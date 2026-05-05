@@ -4,7 +4,7 @@
 // Apache License text: https://www.apache.org/licenses/LICENSE-2.0
 // MIT License text: https://opensource.org/licenses/MIT
 
-use super::{CmdResponse, RpcRequest, message};
+use super::{CmdResponse, RpcRequest, message, SshAgentDaemon};
 use crate::cli::clipboard;
 use crate::database::{
     BaseDbFunctions, DatabaseTimeout, DbStats, HistoryAction, HistoryDataType, NyxDb,
@@ -14,14 +14,20 @@ use atlas_http::HttpRequest;
 use falcon_cli::*;
 use std::process::exit;
 use std::str::FromStr;
+use std::sync::{RwLock, LazyLock};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
 use tokio::io::AsyncWriteExt;
 use tokio::net::TcpListener;
 use tokio::task;
+use zeroize::Zeroize;
 
 #[cfg(any(target_os="linux", feature = "fuse"))]
 use fuser::BackgroundSession;
+
+pub static TIMERS: LazyLock<RwLock<Vec<RpcTimer>>> = LazyLock::new(|| {
+    RwLock::new(Vec::new())
+});
 
 pub struct RpcDaemon {
     pub nyxdb: Arc<Mutex<NyxDb>>,
@@ -32,12 +38,17 @@ pub struct RpcDaemon {
 
 pub struct RpcSession {
     pub dbfile: String,
-    pub lock: [u8; 32],
+    pub lock: zeroize::Zeroizing<[u8; 32]>,
     pub is_modified: bool,
     pub timeout: DatabaseTimeout,
     pub clipboard_timeout: u64,
     pub expires_at: Option<SystemTime>,
     pub clipboard_expires_at: Option<SystemTime>,
+}
+
+pub struct RpcTimer {
+    pub filename: String,
+    pub expires_at: SystemTime
 }
 
 impl RpcDaemon {
@@ -53,10 +64,10 @@ impl RpcDaemon {
     /// Start the daemon
     pub async fn start(self: Arc<Self>) -> Result<(), Error> {
         #[cfg(any(target_os="linux", feature = "fuse"))]
-        // Mount fuse point
+         // Mount fuse point
         {
             if let Err(e) = super::fs_launcher::mount(&self) {
-                cli_error!("Unable to mouint fuse point, skipping.  Error: {}", e);
+                cli_error!("Unable to mount fuse point, skipping.  Error: {}", e);
             }
         }
 
@@ -64,6 +75,9 @@ impl RpcDaemon {
         let rpc_host = format!("{}:{}", CONFIG.host, CONFIG.port);
         let listener = TcpListener::bind(&rpc_host).await?;
         cli_info!("Listening for connections on {}...", rpc_host);
+
+        // Start ssh agent
+        SshAgentDaemon::start(&self.nyxdb).await?;
 
         // Create timer
         let mut timer_interval = tokio::time::interval(tokio::time::Duration::from_secs(15));
@@ -92,7 +106,6 @@ impl RpcDaemon {
                             stream.write_all(res.http_res.raw().as_bytes()).await.unwrap();
                         }
                     });
-
                 }
             };
         }
@@ -156,17 +169,17 @@ impl RpcDaemon {
             ("user", "new") => db.users.add_item(req.id, &req.params),
             ("user", "rename") => db.users.rename_item(req.id, &req.params),
 
-            // Oaut / OTP
-            ("otp", "copy") => db.oauth.copy_item(req.id, &req.params),
-            ("otp", "delete") => db.oauth.delete_item(req.id, &req.params),
-            ("otp", "edit") => db.oauth.edit_item(req.id, &req.params),
-            ("otp", "exists") => db.oauth.exists(req.id, &req.params),
-            ("otp", "find") => db.oauth.find_items(req.id, &req.params),
-            ("otp", "generate") => db.oauth.generate(req.id, &req.params),
-            ("otp", "get") => db.oauth.get_item(req.id, &req.params),
-            ("otp", "list") => db.oauth.list_items(req.id, &req.params),
-            ("otp", "new") => db.oauth.add_item(req.id, &req.params),
-            ("otp", "rename") => db.oauth.rename_item(req.id, &req.params),
+            // Otp
+            ("otp", "copy") => db.otp.copy_item(req.id, &req.params),
+            ("otp", "delete") => db.otp.delete_item(req.id, &req.params),
+            ("otp", "edit") => db.otp.edit_item(req.id, &req.params),
+            ("otp", "exists") => db.otp.exists(req.id, &req.params),
+            ("otp", "find") => db.otp.find_items(req.id, &req.params),
+            ("otp", "generate") => db.otp.generate(req.id, &req.params),
+            ("otp", "get") => db.otp.get_item(req.id, &req.params),
+            ("otp", "list") => db.otp.list_items(req.id, &req.params),
+            ("otp", "new") => db.otp.add_item(req.id, &req.params),
+            ("otp", "rename") => db.otp.rename_item(req.id, &req.params),
 
             // SSH keys
             ("ssh", "copy") => db.ssh_keys.copy_key(req.id, &req.params),
@@ -200,6 +213,15 @@ impl RpcDaemon {
             ("note", "list") => db.notes.list_items(req.id, &req.params),
             ("note", "new") => db.notes.add_item(req.id, &req.params),
             ("note", "rename") => db.notes.rename_item(req.id, &req.params),
+
+            // Files
+            ("file", "delete") => db.files.delete_item(req.id, &req.params),
+            ("file", "edit") => db.files.edit_item(req.id, &req.params),
+            ("file", "exists") => db.files.exists(req.id, &req.params),
+            ("file", "freeze") => db.files.freeze_item(req.id, &req.params),
+            ("file", "get") => db.files.get_item(req.id, &req.params),
+            ("file", "list") => db.files.list_items(req.id, &req.params),
+            ("file", "new") => db.files.add_item(req.id, &req.params),
 
             _ => Ok(CmdResponse::none(message::err(
                 0,
@@ -277,7 +299,8 @@ impl RpcDaemon {
             self.session.lock().map_err(|e| Error::Db(format!("Unable to load session: {}", e)))?;
 
         // Save
-        db.save(&session.dbfile, session.lock, None)?;
+        db.save(&session.dbfile, *session.lock, None)?;
+
         session.is_modified = false;
 
         Ok(CmdResponse::none(message::ok(req_id, true)))
@@ -297,28 +320,21 @@ impl RpcDaemon {
 
     /// Shutdown
     fn shutdown(&self) {
-        // Secure clear database
-        if let Ok(mut db) = self.nyxdb.lock() {
-            db.secure_clear();
-        }
-
         cli_info!("Received shutdown order, gracefully exiting.\n");
+        if let Ok(mut db) = self.nyxdb.lock() {
+            db.zeroize();
+        }
         exit(0);
     }
 
     /// Check timer
     async fn check_timer(&self) {
-        // Lock session
-        let mut session = match self.session.lock() {
-            Ok(r) => r,
-            Err(_) => return,
-        };
-
+        let Ok(mut session) = self.session.lock() else { return };
         // Check clearing of clipboard
         if let Some(clip_expires_at) = session.clipboard_expires_at
             && SystemTime::now() >= clip_expires_at
         {
-            let _ = clipboard::copy("");
+            clipboard::clear();
             session.clipboard_expires_at = None;
         }
 
@@ -328,15 +344,54 @@ impl RpcDaemon {
         {
             self.shutdown();
         }
+
+            // Check file timers
+        self.check_file_timers().await;
     }
+
+    async fn check_file_timers(&self) {
+        let Ok(timers) = TIMERS.read() else { return };
+
+        let (mut rm_queue, mut is_all) = (vec![], false);
+        for (idx, timer) in timers.iter().enumerate() {
+            if SystemTime::now() > timer.expires_at {
+                rm_queue.push((idx, timer.filename.to_string()));
+                if timer.filename.as_str() == "all" {
+                    is_all = true;
+                }
+            }
+        }
+        if rm_queue.is_empty() { return; }
+
+        drop(timers);
+        let Ok(mut timers) = TIMERS.write() else { return };
+        let Ok(mut db) = self.nyxdb.lock() else { return };
+
+        if is_all {
+            timers.clear();
+            for (_, file) in db.files.iter_mut() {
+                file.is_protected = true;
+            }
+            return;
+        }
+
+        for (idx, filename) in rm_queue.iter().rev() {
+            timers.remove(*idx);
+            if let Some(file) = db.files.get_mut(filename) {
+                file.is_protected = true;
+            }
+        }
+
+    }
+
 }
 
 impl RpcSession {
     pub fn new(nyxdb: &NyxDb, dbfile: &str, lock: [u8; 32]) -> Self {
-        let timeout = if let Some(to) = CONFIG.timeout {
-            to
+        let timeout = if let Some(to) = &CONFIG.timeout {
+            to.clone()
         } else {
-            nyxdb.default_timeout
+            nyxdb.default_timeout.clone()
         };
 
         // Get expires at
@@ -348,7 +403,7 @@ impl RpcSession {
 
         Self {
             dbfile: dbfile.to_string(),
-            lock,
+            lock: zeroize::Zeroizing::new(lock),
             timeout,
             clipboard_timeout: CONFIG.clipboard_timeout,
             is_modified: false,
@@ -357,3 +412,5 @@ impl RpcSession {
         }
     }
 }
+
+

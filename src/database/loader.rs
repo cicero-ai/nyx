@@ -103,13 +103,13 @@ pub fn create_database(dbfile: &str) -> [u8; 32] {
     let n_password = crypto::normalize_password(&password);
 
     // GEt duration
-    cli_info!("Lock database after inactivity (default: 1h):");
+    cli_info!("Lock database after inactivity (default: 30 mins):");
     cli_info!("    n - Never lock");
     cli_info!("    Or enter timeout: 30s, 15m, 2h, etc.\n");
 
     let duration: DatabaseTimeout;
     loop {
-        let duration_str = cli_get_input("Timeout [1 hour]: ", "1h");
+        let duration_str = cli_get_input("Timeout [30 mins]: ", "30m");
         if let Ok(dur) = DatabaseTimeout::from_str(&duration_str) {
             duration = dur;
             break;

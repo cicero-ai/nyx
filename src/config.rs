@@ -16,7 +16,6 @@ pub struct NyxConfig {
     pub port: u16,
     pub timeout: Option<DatabaseTimeout>,
     pub clipboard_timeout: u64,
-    pub fuse_mount_dir: String,
 }
 
 /// Gather CLI arguments, create config
@@ -38,7 +37,6 @@ pub fn load() -> NyxConfig {
             "-p" | "--port" => set_port(&args[1], &mut config),
             "-t" | "--timeout" => set_timeout(&args[1], &mut config),
             "-c" | "--cb-timeout" => set_clipboard_timeout(&args[1], &mut config),
-            "-m" | "--mount-dir" => config.fuse_mount_dir = args[1].to_string(),
             _ => {}
         };
         args.drain(0..2);
@@ -94,7 +92,6 @@ impl Default for NyxConfig {
             port: 7924,
             timeout: None,
             clipboard_timeout: 120,
-            fuse_mount_dir: "/tmp/nyx".to_string(),
         }
     }
 }

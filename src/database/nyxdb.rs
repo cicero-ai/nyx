@@ -4,8 +4,9 @@
 // Apache License text: https://www.apache.org/licenses/LICENSE-2.0
 // MIT License text: https://opensource.org/licenses/MIT
 
-use super::{BaseDbFunctions, HistoryDb, NotesDb, OauthDb, SshKeysDb, StringsDb, UsersDb};
+use super::{BaseDbFunctions, HistoryDb, NotesDb, OtpDb, SshKeysDb, StringsDb, UsersDb, FilesDb};
 use crate::Error;
+use crate::security::SecureBuffer;
 use crate::security::crypto;
 use bincode::{Decode, Encode, config};
 use falcon_cli::*;
@@ -17,21 +18,22 @@ use std::str::FromStr;
 use std::time::Duration;
 use zeroize::Zeroize;
 
-const MAGIC_BYTES: &[u8; 4] = b"NYX\0";
-const VERSION: u8 = 1;
+pub const MAGIC_BYTES: &[u8; 4] = b"NYX\0";
+pub const VERSION: u8 = 2;
 
 #[derive(Default, Encode, Decode)]
 pub struct NyxDb {
     pub default_timeout: DatabaseTimeout,
     pub users: UsersDb,
-    pub oauth: OauthDb,
+    pub otp: OtpDb,
     pub ssh_keys: SshKeysDb,
     pub strings: StringsDb,
     pub notes: NotesDb,
+    pub files: FilesDb,
     pub history: HistoryDb,
 }
 
-#[derive(Default, Debug, Copy, Clone, Eq, PartialEq, Decode, Encode)]
+#[derive(Default, Debug, Clone, Eq, PartialEq, Decode, Encode)]
 pub enum DatabaseTimeout {
     #[default]
     Never,
@@ -42,7 +44,7 @@ pub enum DatabaseTimeout {
 pub struct DbStats {
     pub dbfile: String,
     pub users: (u32, u32),
-    pub oauth: (u32, u32),
+    pub otp: (u32, u32),
     pub ssh_keys: (u32, u32),
     pub strings: (u32, u32),
     pub notes: (u32, u32),
@@ -57,7 +59,13 @@ impl NyxDb {
     ) -> Result<Self, Error> {
         let mut db = Self {
             default_timeout,
-            ..Default::default()
+            users: UsersDb::default(),
+            otp: OtpDb::default(),
+            ssh_keys: SshKeysDb::default(),
+            notes: NotesDb::default(),
+            strings: StringsDb::default(),
+            files: FilesDb::default(),
+            history: HistoryDb::default()
         };
 
         // Save
@@ -73,28 +81,29 @@ impl NyxDb {
         n_password: [u8; 32],
         master_key: Option<[u8; 32]>,
     ) -> Result<(), Error> {
-        // Encode via bincode
+        // Encode via bincode into a SecureBuffer (mlock'd, excluded from dumps)
         let encoded: Vec<u8> = bincode::encode_to_vec(&*self, config::standard())
             .map_err(|e| Error::Db(format!("Unable to save database: {}", e)))?;
 
-        // Get output
-        let mut output = vec![];
-        output.extend_from_slice(MAGIC_BYTES);
-        output.push(VERSION);
-        output.extend(encoded);
+        let mut output_vec = Vec::with_capacity(5 + encoded.len());
+        output_vec.extend_from_slice(MAGIC_BYTES);
+        output_vec.push(VERSION);
+        output_vec.extend(encoded);
+
+        // Wrap plaintext in SecureBuffer -- locked in RAM, zeroized on drop
+        let output = SecureBuffer::from_vec(output_vec)?;
 
         // Resave file if just updating
         if Path::new(&dbfile).exists() && master_key.is_none() {
-            crypto::update_existing_file(dbfile, &output, n_password)?;
+            crypto::update_existing_file(dbfile, output.as_slice(), n_password)?;
             return Ok(());
         }
 
         // Encrypt bytes
-
         let encrypted = if let Some(m_key) = master_key {
-            crypto::encrypt_with_master_key(&output, n_password, m_key)?
+            crypto::encrypt_with_master_key(output.as_slice(), n_password, m_key)?
         } else {
-            crypto::encrypt(&output, n_password)?
+            crypto::encrypt(output.as_slice(), n_password)?
         };
 
         // Check parent dir
@@ -107,6 +116,7 @@ impl NyxDb {
         // Save file
         fs::write(dbfile, &encrypted)?;
 
+        // output drops here: zeroized + munlock'd
         Ok(())
     }
 
@@ -115,14 +125,30 @@ impl NyxDb {
         // Read file
         let encrypted_bytes = fs::read(dbfile)?;
 
-        // Decrypt
-        let bytes = crypto::decrypt(&encrypted_bytes, n_password)?;
+        // Decrypt into a SecureBuffer -- locked in RAM, excluded from core dumps
+        let decrypted = crypto::decrypt(&encrypted_bytes, n_password)?;
+        let mut bytes = SecureBuffer::from_vec(decrypted)?;
+        if !bytes.starts_with(MAGIC_BYTES) {
+            return Err(Error::Db("Not a valid Nyx database file.".to_string()));
+        }
+
+        // Migrate if needed
+        if bytes[4] == 1 {
+            let migrated = crate::database::migrations::v1::migrate(bytes.as_slice())?;
+            bytes = SecureBuffer::from_vec(migrated)?;
+            crypto::update_existing_file(dbfile, bytes.as_slice(), n_password)?;
+        }
 
         // Decode
-        let (db, _len): (NyxDb, usize) =
-            bincode::decode_from_slice(&bytes[5..], config::standard())
+        let (mut db, _len): (NyxDb, usize) = bincode::decode_from_slice(&bytes[5..], config::standard())
                 .map_err(|e| Error::Db(format!("Unable to load database: {}", e)))?;
 
+        // Protect all files
+        for (_, file) in db.files.iter_mut() {
+            file.is_protected = true;
+        }
+
+        // bytes drops here: zeroized + munlock'd
         Ok(db)
     }
 
@@ -141,7 +167,7 @@ impl NyxDb {
             n_password = crypto::normalize_password(&password);
             password.zeroize();
 
-            let data = match crypto::decrypt(&encrypted_bytes, n_password) {
+            let decrypted = match crypto::decrypt(&encrypted_bytes, n_password) {
                 Ok(r) => r,
                 Err(_) => {
                     cli_info!("Invalid password, please double check and try again.\n");
@@ -149,33 +175,28 @@ impl NyxDb {
                 }
             };
 
+            // Wrap in SecureBuffer so decrypted bytes are locked in RAM and zeroized on drop
+            let data = SecureBuffer::from_vec(decrypted)?;
+
             // Check header
             if data.len() < 5 {
                 return Err(Error::Db(
                     "This is not a valid Nyx database file.".to_string(),
                 ));
-            } else if &data[0..4] != MAGIC_BYTES {
+            } else if &data.as_slice()[0..4] != MAGIC_BYTES {
                 return Err(Error::Db(
                     "This is not a valid Nyx database file.".to_string(),
                 ));
-            } else if data[4] != VERSION {
+            } else if data[4] != VERSION && data[4] != 1 {
                 return Err(Error::Db(
                     "This is not a valid Nyx database file.".to_string(),
                 ));
             }
+            // data drops here: zeroized + munlock'd
             break;
         }
 
         Ok(n_password)
-    }
-
-    /// Secure clear
-    pub fn secure_clear(&mut self) {
-        self.users.secure_clear();
-        self.oauth.secure_clear();
-        self.ssh_keys.secure_clear();
-        self.strings.secure_clear();
-        self.notes.secure_clear();
     }
 }
 
@@ -226,7 +247,7 @@ impl DbStats {
         Self {
             dbfile: dbfile.to_string(),
             users: Self::get_item(&nyxdb.users),
-            oauth: Self::get_item(&nyxdb.oauth),
+            otp: Self::get_item(&nyxdb.otp),
             ssh_keys: Self::get_item(&nyxdb.ssh_keys),
             strings: Self::get_item(&nyxdb.strings),
             notes: Self::get_item(&nyxdb.notes),
@@ -252,3 +273,25 @@ impl DbStats {
         (db.len() as u32, dirs.len() as u32)
     }
 }
+
+impl Zeroize for NyxDb {
+    fn zeroize(&mut self) {
+        self.users.zeroize();
+        self.otp.zeroize();
+        self.ssh_keys.zeroize();
+        self.notes.zeroize();
+        self.strings.zeroize();
+        self.files.zeroize();
+        self.history.zeroize();
+    }
+}
+
+impl Drop for NyxDb {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+
+
+
