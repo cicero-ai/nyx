@@ -21,7 +21,7 @@ use zeroize::Zeroize;
 pub const MAGIC_BYTES: &[u8; 4] = b"NYX\0";
 pub const VERSION: u8 = 2;
 
-#[derive(Default, Encode, Decode)]
+#[derive(Default, Encode, Decode, Serialize, Deserialize)]
 pub struct NyxDb {
     pub default_timeout: DatabaseTimeout,
     pub users: UsersDb,
@@ -33,7 +33,7 @@ pub struct NyxDb {
     pub history: HistoryDb,
 }
 
-#[derive(Default, Debug, Clone, Eq, PartialEq, Decode, Encode)]
+#[derive(Default, Debug, Clone, Eq, PartialEq, Decode, Encode, Serialize, Deserialize)]
 pub enum DatabaseTimeout {
     #[default]
     Never,
