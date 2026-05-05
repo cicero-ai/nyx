@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
-#[derive(Default, Encode, Decode)]
+#[derive(Default, Encode, Decode, Serialize, Deserialize)]
 pub struct NotesDb(pub HashMap<String, Note>);
 
 #[derive(Clone, Encode, Decode, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]

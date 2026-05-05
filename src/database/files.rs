@@ -32,7 +32,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 const MIN_FILES_PER_GROUP: usize = 3;
 const MAX_FILES_PER_GROUP: usize = 12;
 
-#[derive(Default, Encode, Decode)]
+#[derive(Default, Encode, Decode, Serialize, Deserialize)]
 pub struct FilesDb(pub HashMap<String, ProtectedFile>);
 
 #[derive(Default, Clone, Encode, Decode, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]

@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
-#[derive(Default, Encode, Decode)]
+#[derive(Default, Encode, Decode, Serialize, Deserialize)]
 pub struct SshKeysDb(pub HashMap<String, SshKey>);
 
 #[derive(Clone, Encode, Decode, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]

@@ -14,7 +14,7 @@ use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
-#[derive(Default, Decode, Encode, Zeroize, ZeroizeOnDrop)]
+#[derive(Default, Decode, Encode, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
 pub struct HistoryDb(pub Vec<HistoryItem>);
 
 #[derive(Clone, Decode, Encode, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
