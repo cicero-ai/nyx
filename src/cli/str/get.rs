@@ -35,11 +35,7 @@ impl CliCommand for CliStrGet {
     }
 
     fn help(&self) -> CliHelpScreen {
-        let mut help = CliHelpScreen::new(
-            "Copy String",
-            "nyx get <NAME>",
-            "Copies value of string to clipboard",
-        );
+        let mut help = CliHelpScreen::new("Copy String", "nyx get <NAME>", "Copies value of string to clipboard");
 
         help.add_param("NAME", "Name of entry to copy.");
         help.add_example("nyx get mysite/cloudflare");

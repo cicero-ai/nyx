@@ -27,11 +27,7 @@ impl CliCommand for CliDbCreate {
     }
 
     fn help(&self) -> CliHelpScreen {
-        let mut help = CliHelpScreen::new(
-            "Create Nyx Database",
-            "nyx db create",
-            "Creates a new Nyx database",
-        );
+        let mut help = CliHelpScreen::new("Create Nyx Database", "nyx db create", "Creates a new Nyx database");
 
         help.add_example("nyx db create");
         help

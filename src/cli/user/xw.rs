@@ -33,11 +33,7 @@ impl CliCommand for CliUserXw {
     }
 
     fn help(&self) -> CliHelpScreen {
-        let mut help = CliHelpScreen::new(
-            "Copy User URL",
-            "nyx xw <NAME>",
-            "Copy user URL to clipboard",
-        );
+        let mut help = CliHelpScreen::new("Copy User URL", "nyx xw <NAME>", "Copy user URL to clipboard");
 
         help.add_param("NAME", "Name of entry to copy from.");
         help.add_example("nyx xw mysite/cloudflare");

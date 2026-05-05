@@ -4,15 +4,15 @@
 // Apache License text: https://www.apache.org/licenses/LICENSE-2.0
 // MIT License text: https://opensource.org/licenses/MIT
 
-use sha2::{Sha256, Digest};
 use crate::cli;
 use crate::database::ProtectedFile;
 use crate::error::Error;
 use crate::rpc;
 use falcon_cli::*;
-use std::{fs, env};
-use std::path::{Path, PathBuf};
+use sha2::{Digest, Sha256};
 use std::os::unix::fs::PermissionsExt;
+use std::path::{Path, PathBuf};
+use std::{env, fs};
 
 #[derive(Default)]
 pub struct CliFileProtect {}
@@ -34,10 +34,12 @@ impl CliCommand for CliFileProtect {
                 return Err(CliError::InvalidParam(idx, format!("File does not exist, {}", filename)).into());
             }
 
-            let full_path = if let Ok(pbuf) = fs::canonicalize(filename) && let Some(path_str) = pbuf.to_str() {
+            let full_path = if let Ok(pbuf) = fs::canonicalize(filename)
+                && let Some(path_str) = pbuf.to_str()
+            {
                 path_str.to_string()
             } else {
-                return Err(CliError::InvalidParam(idx, format!("File does not exist, {}", filename)).into())
+                return Err(CliError::InvalidParam(idx, format!("File does not exist, {}", filename)).into());
             };
 
             let mut hasher = Sha256::new();
@@ -50,19 +52,21 @@ impl CliCommand for CliFileProtect {
                 ino: 0,
                 is_protected: true,
                 contents: vec![],
-                whitelist: vec![]
+                whitelist: vec![],
             });
         }
 
         // Get item info
         cli_header("Protect File");
-        cli_sendln!("Enter the the binaries that are allowed to access this file, one binary per-line (ie. gh, aws, claude).");   
+        cli_sendln!(
+            "Enter the the binaries that are allowed to access this file, one binary per-line (ie. gh, aws, claude)."
+        );
         let whitelist_vec = cli_get_multiline_input("Allowed Binaries");
 
         let mut whitelist: Vec<String> = Vec::new();
         for app in whitelist_vec.split("\n") {
             let Some(binary) = self.which(app) else {
-                return Err(CliError::Generic(format!("Unable to find executable path of {}", app)).into())
+                return Err(CliError::Generic(format!("Unable to find executable path of {}", app)).into());
             };
             whitelist.push(binary);
         }
@@ -75,9 +79,7 @@ impl CliCommand for CliFileProtect {
             .map_err(|e| CliError::Generic(format!("Unable to serialize JSON object: {}", e)))?;
 
         // Create item
-        if let Err(e) =
-            rpc::send::<&String, bool>("file.new", &vec![&file_str])
-        {
+        if let Err(e) = rpc::send::<&String, bool>("file.new", &vec![&file_str]) {
             return Err(Error::Generic(format!("Unable to protect file: {}", e)).into());
         }
 
@@ -101,17 +103,19 @@ impl CliCommand for CliFileProtect {
 
         help
     }
-
 }
 
-
 impl CliFileProtect {
-
     fn which(&self, binary: &str) -> Option<String> {
-
         if binary.contains('/') {
             let path = PathBuf::from(binary);
-            return if self.is_executable(&path) && let Some(res) = path.to_str() { Some(res.to_string()) } else { None };
+            return if self.is_executable(&path)
+                && let Some(res) = path.to_str()
+            {
+                Some(res.to_string())
+            } else {
+                None
+            };
         }
 
         let path_var = env::var_os("PATH")?;
@@ -120,7 +124,7 @@ impl CliFileProtect {
             if self.is_executable(&candidate) {
                 let pbuf = match candidate.canonicalize() {
                     Ok(r) => r,
-                    Err(_) => candidate
+                    Err(_) => candidate,
                 };
                 return Some(pbuf.to_str()?.to_string());
             }
@@ -130,11 +134,6 @@ impl CliFileProtect {
     }
 
     fn is_executable(&self, path: &Path) -> bool {
-        fs::metadata(path)
-            .map(|m| m.is_file() && (m.permissions().mode() & 0o111 != 0))
-            .unwrap_or(false)
+        fs::metadata(path).map(|m| m.is_file() && (m.permissions().mode() & 0o111 != 0)).unwrap_or(false)
     }
-
 }
-
-

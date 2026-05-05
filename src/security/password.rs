@@ -43,8 +43,7 @@ pub fn generate(length: usize) -> String {
     }
 
     // Set chars
-    let all_chars =
-        b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;:,.<>?";
+    let all_chars = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;:,.<>?";
     let numbers = b"0123456789";
     let special_chars = b"!@#$%^&*()_+-=[]{}|;:,.<>?";
 

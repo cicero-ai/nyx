@@ -34,11 +34,7 @@ impl CliCommand for CliDbStats {
     }
 
     fn help(&self) -> CliHelpScreen {
-        let mut help = CliHelpScreen::new(
-            "Database Stats",
-            "nyx db stats",
-            "Displays overall database statistics",
-        );
+        let mut help = CliHelpScreen::new("Database Stats", "nyx db stats", "Displays overall database statistics");
 
         help.add_example("nyx db stats");
         help

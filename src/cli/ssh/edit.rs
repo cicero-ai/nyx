@@ -38,9 +38,7 @@ impl CliCommand for CliSshKeyEdit {
 
         let port = cli_get_input("Port: ", "");
         if !port.is_empty() {
-            ssh_key.port = port
-                .parse::<u16>()
-                .map_err(|_| CliError::Generic("Invalid port number".to_string()))?;
+            ssh_key.port = port.parse::<u16>().map_err(|_| CliError::Generic("Invalid port number".to_string()))?;
         }
 
         let username = cli_get_input("Username: ", "");
@@ -70,11 +68,7 @@ impl CliCommand for CliSshKeyEdit {
     }
 
     fn help(&self) -> CliHelpScreen {
-        let mut help = CliHelpScreen::new(
-            "Edit SSH key",
-            "nyx ssh edit <NAME>",
-            "Edit details of an SSH key",
-        );
+        let mut help = CliHelpScreen::new("Edit SSH key", "nyx ssh edit <NAME>", "Edit details of an SSH key");
 
         help.add_param("NAME", "Name of the entry to edit.");
         help.add_example("nyx ssh edit mysite/cloudflare");

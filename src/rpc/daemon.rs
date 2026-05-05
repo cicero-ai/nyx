@@ -4,35 +4,31 @@
 // Apache License text: https://www.apache.org/licenses/LICENSE-2.0
 // MIT License text: https://opensource.org/licenses/MIT
 
-use super::{CmdResponse, RpcRequest, message, SshAgentDaemon};
+use super::{CmdResponse, RpcRequest, SshAgentDaemon, message};
 use crate::cli::clipboard;
-use crate::database::{
-    BaseDbFunctions, DatabaseTimeout, DbStats, HistoryAction, HistoryDataType, NyxDb,
-};
+use crate::database::{BaseDbFunctions, DatabaseTimeout, DbStats, HistoryAction, HistoryDataType, NyxDb};
 use crate::{CONFIG, Error};
 use atlas_http::HttpRequest;
 use falcon_cli::*;
 use std::process::exit;
 use std::str::FromStr;
-use std::sync::{RwLock, LazyLock};
 use std::sync::{Arc, Mutex};
+use std::sync::{LazyLock, RwLock};
 use std::time::{Duration, SystemTime};
 use tokio::io::AsyncWriteExt;
 use tokio::net::TcpListener;
 use tokio::task;
 use zeroize::Zeroize;
 
-#[cfg(any(target_os="linux", feature = "fuse"))]
+#[cfg(any(target_os = "linux", feature = "fuse"))]
 use fuser::BackgroundSession;
 
-pub static TIMERS: LazyLock<RwLock<Vec<RpcTimer>>> = LazyLock::new(|| {
-    RwLock::new(Vec::new())
-});
+pub static TIMERS: LazyLock<RwLock<Vec<RpcTimer>>> = LazyLock::new(|| RwLock::new(Vec::new()));
 
 pub struct RpcDaemon {
     pub nyxdb: Arc<Mutex<NyxDb>>,
     pub session: Mutex<RpcSession>,
-    #[cfg(any(target_os="linux", feature = "fuse"))]
+    #[cfg(any(target_os = "linux", feature = "fuse"))]
     pub fuse_point: Mutex<Option<BackgroundSession>>,
 }
 
@@ -48,7 +44,7 @@ pub struct RpcSession {
 
 pub struct RpcTimer {
     pub filename: String,
-    pub expires_at: SystemTime
+    pub expires_at: SystemTime,
 }
 
 impl RpcDaemon {
@@ -56,15 +52,15 @@ impl RpcDaemon {
         Self {
             session: Mutex::new(RpcSession::new(&nyxdb, dbfile, n_password)),
             nyxdb: Arc::new(Mutex::new(nyxdb)),
-            #[cfg(any(target_os="linux", feature = "fuse"))]
+            #[cfg(any(target_os = "linux", feature = "fuse"))]
             fuse_point: Mutex::new(None),
         }
     }
 
     /// Start the daemon
     pub async fn start(self: Arc<Self>) -> Result<(), Error> {
-        #[cfg(any(target_os="linux", feature = "fuse"))]
-         // Mount fuse point
+        #[cfg(any(target_os = "linux", feature = "fuse"))]
+        // Mount fuse point
         {
             if let Err(e) = super::fs_launcher::mount(&self) {
                 cli_error!("Unable to mount fuse point, skipping.  Error: {}", e);
@@ -144,11 +140,7 @@ impl RpcDaemon {
         let mut db = match self.nyxdb.lock() {
             Ok(r) => r,
             Err(e) => {
-                return CmdResponse::none(message::err(
-                    req.id,
-                    500,
-                    &format!("Unable to lock database, {}", e),
-                ));
+                return CmdResponse::none(message::err(req.id, 500, &format!("Unable to lock database, {}", e)));
             }
         };
 
@@ -254,11 +246,7 @@ impl RpcDaemon {
             }
 
             if let Err(e) = self.savedb(req.id, &mut db) {
-                return CmdResponse::none(message::err(
-                    req.id,
-                    500,
-                    &format!("Unable to save database: {}", e),
-                ));
+                return CmdResponse::none(message::err(req.id, 500, &format!("Unable to save database: {}", e)));
             }
         }
 
@@ -287,16 +275,14 @@ impl RpcDaemon {
         }
 
         if res.is_copy {
-            session.clipboard_expires_at =
-                Some(SystemTime::now() + Duration::from_secs(session.clipboard_timeout));
+            session.clipboard_expires_at = Some(SystemTime::now() + Duration::from_secs(session.clipboard_timeout));
         }
     }
 
     /// Save database
     fn savedb(&self, req_id: usize, db: &mut NyxDb) -> Result<CmdResponse, Error> {
         // Lock session
-        let mut session =
-            self.session.lock().map_err(|e| Error::Db(format!("Unable to load session: {}", e)))?;
+        let mut session = self.session.lock().map_err(|e| Error::Db(format!("Unable to load session: {}", e)))?;
 
         // Save
         db.save(&session.dbfile, *session.lock, None)?;
@@ -345,7 +331,7 @@ impl RpcDaemon {
             self.shutdown();
         }
 
-            // Check file timers
+        // Check file timers
         self.check_file_timers().await;
     }
 
@@ -361,7 +347,9 @@ impl RpcDaemon {
                 }
             }
         }
-        if rm_queue.is_empty() { return; }
+        if rm_queue.is_empty() {
+            return;
+        }
 
         drop(timers);
         let Ok(mut timers) = TIMERS.write() else { return };
@@ -381,9 +369,7 @@ impl RpcDaemon {
                 file.is_protected = true;
             }
         }
-
     }
-
 }
 
 impl RpcSession {
@@ -412,5 +398,3 @@ impl RpcSession {
         }
     }
 }
-
-

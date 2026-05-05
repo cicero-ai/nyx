@@ -36,11 +36,7 @@ impl CliCommand for CliDbOpen {
     }
 
     fn help(&self) -> CliHelpScreen {
-        let mut help = CliHelpScreen::new(
-            "Open Nyx Database",
-            "nyx db open [-f <DBFILE>]",
-            "Opens a Nyx database",
-        );
+        let mut help = CliHelpScreen::new("Open Nyx Database", "nyx db open [-f <DBFILE>]", "Opens a Nyx database");
 
         help.add_param("DBFILE", "Optional location of database file to open.");
         help.add_example("nyx db open");

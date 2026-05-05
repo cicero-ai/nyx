@@ -16,9 +16,7 @@ pub struct CliDbHistory {}
 impl CliCommand for CliDbHistory {
     fn process(&self, req: &CliRequest) -> anyhow::Result<()> {
         let n = if let Some(n_str) = req.get_flag("n") {
-            n_str
-                .parse::<usize>()
-                .map_err(|e| Error::Validate(format!("Invalid start number: {}", e)))?
+            n_str.parse::<usize>().map_err(|e| Error::Validate(format!("Invalid start number: {}", e)))?
         } else {
             0
         };

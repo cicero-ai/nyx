@@ -36,11 +36,7 @@ pub fn encrypt(message: &[u8], password: [u8; 32]) -> Result<Vec<u8>, Error> {
 }
 
 /// Encrypt with master key
-pub fn encrypt_with_master_key(
-    message: &[u8],
-    password: [u8; 32],
-    master_key: [u8; 32],
-) -> Result<Vec<u8>, Error> {
+pub fn encrypt_with_master_key(message: &[u8], password: [u8; 32], master_key: [u8; 32]) -> Result<Vec<u8>, Error> {
     let mut rng = OsRng;
 
     // Generate iv
@@ -50,8 +46,7 @@ pub fn encrypt_with_master_key(
     // Encrypt message
     let key: &Key<Aes256Gcm> = &master_key.into();
     let cipher = Aes256Gcm::new(key);
-    let ciphertext =
-        cipher.encrypt(&iv.into(), message.as_ref()).map_err(|e| Error::Crypto(e.to_string()))?;
+    let ciphertext = cipher.encrypt(&iv.into(), message.as_ref()).map_err(|e| Error::Crypto(e.to_string()))?;
 
     // Get password iv
     let mut password_iv = [0u8; 12];
@@ -64,9 +59,8 @@ pub fn encrypt_with_master_key(
     // Encrypt outer seal
     let outer_key = Key::<Aes256Gcm>::from(child_key);
     let outer_cipher = Aes256Gcm::new(&outer_key);
-    let encrypted_full_key = outer_cipher
-        .encrypt(&password_iv.into(), master_key.as_ref())
-        .map_err(|e| Error::Crypto(e.to_string()))?;
+    let encrypted_full_key =
+        outer_cipher.encrypt(&password_iv.into(), master_key.as_ref()).map_err(|e| Error::Crypto(e.to_string()))?;
 
     // Zeroize intermediate key material
     argon_hash.zeroize();
@@ -105,10 +99,7 @@ pub fn decrypt(payload: &[u8], password: [u8; 32]) -> Result<Vec<u8>, Error> {
 }
 
 /// Extract master key
-pub fn extract_master_key(
-    payload: &[u8],
-    password: [u8; 32],
-) -> Result<([u8; 12], [u8; 32]), Error> {
+pub fn extract_master_key(payload: &[u8], password: [u8; 32]) -> Result<([u8; 12], [u8; 32]), Error> {
     // Check header
     if payload.len() < 122 {
         return Err(Error::Crypto("Payload too short".to_string()));
@@ -153,11 +144,7 @@ pub fn extract_master_key(
 }
 
 /// Save an existing file while retaining the same master key for password recovery via BIP39
-pub fn update_existing_file(
-    filepath: &str,
-    payload: &[u8],
-    n_password: [u8; 32],
-) -> Result<(), Error> {
+pub fn update_existing_file(filepath: &str, payload: &[u8], n_password: [u8; 32]) -> Result<(), Error> {
     // Get file
     let encrypted_bytes = fs::read(filepath)?;
 
@@ -188,10 +175,7 @@ pub fn normalize_password(password: &str) -> [u8; 32] {
 }
 
 /// Hash via Argon2
-fn argon2_hash(
-    password: &[u8; 32],
-    previous_salt: Option<[u8; 16]>,
-) -> Result<([u8; 32], [u8; 16]), Error> {
+fn argon2_hash(password: &[u8; 32], previous_salt: Option<[u8; 16]>) -> Result<([u8; 32], [u8; 16]), Error> {
     // Check if we have salt
     let mut salt: [u8; 16] = [0; 16];
     if let Some(prev_salt) = previous_salt {
@@ -208,18 +192,13 @@ fn argon2_hash(
     );
 
     let mut hash = [0u8; 32];
-    argon2
-        .hash_password_into(password, &salt, &mut hash)
-        .map_err(|e| Error::Crypto(e.to_string()))?;
+    argon2.hash_password_into(password, &salt, &mut hash).map_err(|e| Error::Crypto(e.to_string()))?;
 
     Ok((hash, salt))
 }
 
 /// Derive child key via HKDF. Caller is responsible for zeroizing the returned child_bytes.
-fn derive_key(
-    password: &[u8; 32],
-    previous_nonce: Option<[u8; 32]>,
-) -> Result<([u8; 32], [u8; 32]), Error> {
+fn derive_key(password: &[u8; 32], previous_nonce: Option<[u8; 32]>) -> Result<([u8; 32], [u8; 32]), Error> {
     // Generate nonce
     let nonce: [u8; 32] = get_nonce(previous_nonce);
 
@@ -248,10 +227,7 @@ pub fn get_bip39_words(payload: &[u8], password: &str) -> Result<Vec<String>, Er
 
 /// Restore from BIP39 words
 /// Restore from BIP39 words. Caller must zeroize the returned master_key when done.
-pub fn restore_from_bip39_words(
-    payload: &[u8],
-    phrase: &str,
-) -> Result<(Vec<u8>, [u8; 32]), Error> {
+pub fn restore_from_bip39_words(payload: &[u8], phrase: &str) -> Result<(Vec<u8>, [u8; 32]), Error> {
     // Check header
     if payload.len() < 122 {
         return Err(Error::Crypto("Payload too short".to_string()));
@@ -265,10 +241,11 @@ pub fn restore_from_bip39_words(
     iv.copy_from_slice(&payload[50..62]);
 
     // Get the master key from mnemonic entropy
-    let mnemonic = Mnemonic::parse(phrase)
-        .map_err(|e| Error::Crypto(format!("Unable to convert phrase to master key: {}", e)))?;
+    let mnemonic =
+        Mnemonic::parse(phrase).map_err(|e| Error::Crypto(format!("Unable to convert phrase to master key: {}", e)))?;
     let mut entropy_vec = mnemonic.to_entropy();
-    let master_key: [u8; 32] = entropy_vec.as_slice()
+    let master_key: [u8; 32] = entropy_vec
+        .as_slice()
         .try_into()
         .map_err(|e| Error::Generic(format!("Unable to convert master key to 32 bytes: {}", e)))?;
     entropy_vec.zeroize();

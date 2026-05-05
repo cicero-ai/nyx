@@ -39,11 +39,7 @@ pub fn ok<T: Serialize>(id: usize, result: T) -> HttpResponse {
     };
     let json: String = serde_json::to_string_pretty(&response).unwrap();
 
-    HttpResponse::new(
-        &200,
-        &vec!["Content-type: application/json".to_string()],
-        &json,
-    )
+    HttpResponse::new(&200, &vec!["Content-type: application/json".to_string()], &json)
 }
 /// Give error response
 pub fn err(id: usize, code: usize, message: &str) -> HttpResponse {
@@ -59,11 +55,7 @@ pub fn err(id: usize, code: usize, message: &str) -> HttpResponse {
     };
     let json: String = serde_json::to_string(&response).unwrap();
 
-    HttpResponse::new(
-        &500,
-        &vec!["Content-type: application/json".to_string()],
-        &json,
-    )
+    HttpResponse::new(&500, &vec!["Content-type: application/json".to_string()], &json)
 }
 
 pub struct CmdResponse {

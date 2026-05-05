@@ -36,11 +36,7 @@ impl CliCommand for CliStrFind {
     }
 
     fn help(&self) -> CliHelpScreen {
-        let mut help = CliHelpScreen::new(
-            "Search Strings",
-            "nyx str find <TEXT>",
-            "Search all strings",
-        );
+        let mut help = CliHelpScreen::new("Search Strings", "nyx str find <TEXT>", "Search all strings");
 
         help.add_param("TEXT", "The text to search all entries for.");
         help.add_example("nyx str find my-username");

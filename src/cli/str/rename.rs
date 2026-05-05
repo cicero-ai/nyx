@@ -27,10 +27,7 @@ impl CliCommand for CliStrRename {
         cli::check_exists("str", &req.args[1], false)?;
 
         // Rename item
-        rpc::send::<String, bool>(
-            "str.rename",
-            &vec![req.args[0].to_string(), req.args[1].to_string()],
-        )?;
+        rpc::send::<String, bool>("str.rename", &vec![req.args[0].to_string(), req.args[1].to_string()])?;
 
         cli_info!("Renamed {} to {}\n", req.args[0], req.args[1]);
 
@@ -38,11 +35,7 @@ impl CliCommand for CliStrRename {
     }
 
     fn help(&self) -> CliHelpScreen {
-        let mut help = CliHelpScreen::new(
-            "Rename String",
-            "nyx str mv <SOURCE> <DEST>",
-            "Renames an string",
-        );
+        let mut help = CliHelpScreen::new("Rename String", "nyx str mv <SOURCE> <DEST>", "Renames an string");
 
         help.add_param("SOURCE", "Name of existing entry to rename.");
         help.add_param("DEST", "Name of entry to rename the entry to.");

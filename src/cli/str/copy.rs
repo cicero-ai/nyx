@@ -27,10 +27,7 @@ impl CliCommand for CliStrCopy {
         cli::check_exists("str", &req.args[1], false)?;
 
         // Copy item
-        rpc::send::<String, bool>(
-            "str.copy",
-            &vec![req.args[0].to_string(), req.args[1].to_string()],
-        )?;
+        rpc::send::<String, bool>("str.copy", &vec![req.args[0].to_string(), req.args[1].to_string()])?;
 
         cli_info!("Copied {} to {}\n", req.args[0], req.args[1]);
 

@@ -32,9 +32,7 @@ impl CliCommand for CliDbRestore {
 
         cli_send!("\n");
         cli_send!("Database found at: {}\n\n", dbfile);
-        cli_send!(
-            "Enter the 24 word recovery phrase below that you received during database creation.\n\n"
-        );
+        cli_send!("Enter the 24 word recovery phrase below that you received during database creation.\n\n");
         let phrase = cli_get_input("Recovery Phrase: ", "");
 
         // Try to restore
@@ -47,9 +45,8 @@ impl CliCommand for CliDbRestore {
         };
 
         // Decode
-        let (mut db, _len): (NyxDb, usize) =
-            bincode::decode_from_slice(&decrypted[5..], config::standard())
-                .map_err(|e| Error::Db(format!("Unable to load database: {}", e)))?;
+        let (mut db, _len): (NyxDb, usize) = bincode::decode_from_slice(&decrypted[5..], config::standard())
+            .map_err(|e| Error::Db(format!("Unable to load database: {}", e)))?;
 
         // Get new password
         cli_info!("Recovery phrase verified, please specify a new password below.\n\n");

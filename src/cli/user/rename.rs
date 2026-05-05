@@ -27,10 +27,7 @@ impl CliCommand for CliUserRename {
         cli::check_exists("user", &req.args[1], false)?;
 
         // Rename user
-        rpc::send::<String, bool>(
-            "user.rename",
-            &vec![req.args[0].to_string(), req.args[1].to_string()],
-        )?;
+        rpc::send::<String, bool>("user.rename", &vec![req.args[0].to_string(), req.args[1].to_string()])?;
 
         cli_info!("Renamed {} to {}\n", req.args[0], req.args[1]);
 
@@ -38,8 +35,7 @@ impl CliCommand for CliUserRename {
     }
 
     fn help(&self) -> CliHelpScreen {
-        let mut help =
-            CliHelpScreen::new("Rename User", "nyx mv <SOURCE> <DEST>", "Renames a user");
+        let mut help = CliHelpScreen::new("Rename User", "nyx mv <SOURCE> <DEST>", "Renames a user");
 
         help.add_param("SOURCE", "Name of existing entry to rename.");
         help.add_param("DEST", "Name of entry to rename the entry to.");

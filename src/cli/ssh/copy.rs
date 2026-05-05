@@ -27,10 +27,7 @@ impl CliCommand for CliSshKeyCopy {
         cli::check_exists("ssh", &req.args[1], false)?;
 
         // Copy item
-        rpc::send::<String, bool>(
-            "ssh.copy",
-            &vec![req.args[0].to_string(), req.args[1].to_string()],
-        )?;
+        rpc::send::<String, bool>("ssh.copy", &vec![req.args[0].to_string(), req.args[1].to_string()])?;
 
         cli_info!("Copied {} to {}\n", req.args[0], req.args[1]);
 

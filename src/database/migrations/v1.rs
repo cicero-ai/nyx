@@ -4,22 +4,21 @@
 // Apache License text: https://www.apache.org/licenses/LICENSE-2.0
 // MIT License text: https://opensource.org/licenses/MIT
 
+use crate::Error;
+use crate::database::nyxdb::{MAGIC_BYTES, VERSION};
+use crate::database::{FilesDb, HistoryDb, NotesDb, NyxDb, OtpDb, SshKeysDb, StringsDb, UsersDb};
 use bincode::{Decode, Encode, config};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Duration;
-use crate::database::{NyxDb, HistoryDb, NotesDb, OtpDb, SshKeysDb, StringsDb, UsersDb, FilesDb};
-use crate::database::nyxdb::{MAGIC_BYTES, VERSION};
-use crate::Error;
 
 /// Migrate
 pub fn migrate(bytes: &[u8]) -> Result<Vec<u8>, Error> {
-
-        // Decode
+    // Decode
     let (old, _len): (NyxDbV1, usize) = bincode::decode_from_slice(&bytes[5..], config::standard())
         .map_err(|e| Error::Db(format!("Unable to load database: {}", e)))?;
 
-        let db = NyxDb {
+    let db = NyxDb {
         default_timeout: old.default_timeout.into(),
         users: old.users.into(),
         otp: old.oauth.into(),
@@ -27,18 +26,18 @@ pub fn migrate(bytes: &[u8]) -> Result<Vec<u8>, Error> {
         strings: old.strings.into(),
         notes: old.notes.into(),
         files: FilesDb::default(),
-        history: old.history.into()
+        history: old.history.into(),
     };
 
-        // Encode via bincode
-        let encoded: Vec<u8> = bincode::encode_to_vec(&db, config::standard())
-            .map_err(|e| Error::Db(format!("Unable to save database: {}", e)))?;
+    // Encode via bincode
+    let encoded: Vec<u8> = bincode::encode_to_vec(&db, config::standard())
+        .map_err(|e| Error::Db(format!("Unable to save database: {}", e)))?;
 
-        // Get output
-        let mut output = vec![];
-        output.extend_from_slice(MAGIC_BYTES);
-        output.push(VERSION);
-        output.extend(encoded);
+    // Get output
+    let mut output = vec![];
+    output.extend_from_slice(MAGIC_BYTES);
+    output.push(VERSION);
+    output.extend(encoded);
 
     Ok(output)
 }
@@ -295,5 +294,3 @@ impl From<UsersDbV1> for UsersDb {
         Self(v.0.into_iter().map(|(k, val)| (k, val.into())).collect())
     }
 }
-
-

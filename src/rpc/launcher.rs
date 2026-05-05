@@ -12,9 +12,9 @@ use falcon_cli::*;
 use std::convert::TryInto;
 use std::fs::OpenOptions;
 use std::net::{SocketAddr, TcpStream};
-use std::process::{Command, exit};
-#[cfg(not(target_os="windows"))]
+#[cfg(not(target_os = "windows"))]
 use std::process::Stdio;
+use std::process::{Command, exit};
 use std::sync::Arc;
 use std::time::Duration;
 use std::{env, thread};
@@ -56,7 +56,7 @@ pub fn launch(dbfile: &str, n_password: [u8; 32]) -> Result<(), Error> {
     // Base64
     let hashed_password = general_purpose::STANDARD.encode(n_password);
 
-    #[cfg(any(target_os="linux", feature = "fuse"))]
+    #[cfg(any(target_os = "linux", feature = "fuse"))]
     // Check for unmount
     {
         if super::fs_launcher::is_mount_point() {
@@ -65,7 +65,7 @@ pub fn launch(dbfile: &str, n_password: [u8; 32]) -> Result<(), Error> {
     }
 
     // Open log file
-        let log_filename = get_logfile_path();
+    let log_filename = get_logfile_path();
     let log_file = OpenOptions::new().create(true).append(true).open(&log_filename)?;
     let err_file = log_file.try_clone()?;
 
@@ -151,12 +151,12 @@ pub fn launch(dbfile: &str, n_password: [u8; 32]) -> Result<(), Error> {
             CreateProcessW(
                 ptr::null(), // No module name (use command line)
                 command_wide.as_mut_ptr(),
-                ptr::null_mut(), // Process handle not inheritable
-                ptr::null_mut(), // Thread handle not inheritable
-                0,               // Set handle inheritance to FALSE
+                ptr::null_mut(),                             // Process handle not inheritable
+                ptr::null_mut(),                             // Thread handle not inheritable
+                0,                                           // Set handle inheritance to FALSE
                 DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP, // Detach and create new process group
-                ptr::null_mut(), // Use parent's environment block
-                ptr::null(),     // Use parent's starting directory
+                ptr::null_mut(),                             // Use parent's environment block
+                ptr::null(),                                 // Use parent's starting directory
                 &mut startup_info,
                 &mut process_info,
             )
@@ -186,7 +186,8 @@ pub fn launch(dbfile: &str, n_password: [u8; 32]) -> Result<(), Error> {
 
     if !started {
         cli_error!(
-            "Unable to start Nyx daemon due to unexpected error, please check {} for details.", log_filename
+            "Unable to start Nyx daemon due to unexpected error, please check {} for details.",
+            log_filename
         );
         exit(1);
     }
@@ -198,7 +199,7 @@ pub fn launch(dbfile: &str, n_password: [u8; 32]) -> Result<(), Error> {
     }
 
     // Checj fuse point
-    #[cfg(any(target_os="linux", feature = "fuse"))]
+    #[cfg(any(target_os = "linux", feature = "fuse"))]
     {
         //super::fs_launcher::check_mount_successful();
     }
@@ -208,7 +209,9 @@ pub fn launch(dbfile: &str, n_password: [u8; 32]) -> Result<(), Error> {
 
 /// Get logfile path
 fn get_logfile_path() -> String {
-    if let Some(dir) = dirs::data_dir() && let Some(datadir) = dir.to_str() {
+    if let Some(dir) = dirs::data_dir()
+        && let Some(datadir) = dir.to_str()
+    {
         return format!("{}/nyx.log", datadir);
     }
     "nyx.log".to_string()
@@ -228,10 +231,10 @@ pub fn ping() -> bool {
 /// Start daemon
 pub fn start_daemon() -> Result<(), Error> {
     // Get environment variables
-    let mut hashed_password = env::var("NYX_LAUNCH_HASH")
-        .map_err(|e| Error::Generic(format!("Environment variable error: {}", e)))?;
-    let dbfile = env::var("NYX_LAUNCH_DBFILE")
-        .map_err(|e| Error::Generic(format!("Environment variable error: {}", e)))?;
+    let mut hashed_password =
+        env::var("NYX_LAUNCH_HASH").map_err(|e| Error::Generic(format!("Environment variable error: {}", e)))?;
+    let dbfile =
+        env::var("NYX_LAUNCH_DBFILE").map_err(|e| Error::Generic(format!("Environment variable error: {}", e)))?;
 
     // Harden process security
     if let Err(e) = harden() {
@@ -271,7 +274,9 @@ fn harden() -> Result<(), Error> {
     #[cfg(unix)]
     {
         // Set umask: new files default to owner-only (0600)
-        unsafe { libc::umask(0o177); }
+        unsafe {
+            libc::umask(0o177);
+        }
 
         // Raise mlock limit to 1MB so SecureBuffer can lock secret pages in RAM
         let limit = libc::rlimit {
@@ -303,5 +308,3 @@ fn harden() -> Result<(), Error> {
 
     Ok(())
 }
-
-

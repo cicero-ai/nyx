@@ -4,8 +4,8 @@
 // Apache License text: https://www.apache.org/licenses/LICENSE-2.0
 // MIT License text: https://opensource.org/licenses/MIT
 
-use zeroize::Zeroize;
 use crate::Error;
+use zeroize::Zeroize;
 
 /// A heap-allocated buffer whose pages are mlock'd (never swapped to disk),
 /// marked MADV_DONTDUMP (excluded from core dumps), and zeroized on drop.
@@ -17,7 +17,6 @@ pub struct SecureBuffer {
 }
 
 impl SecureBuffer {
-
     /// Create a new zeroed SecureBuffer of `size` bytes, locked in RAM.
     pub fn new(size: usize) -> Result<Self, Error> {
         let data = vec![0u8; size];

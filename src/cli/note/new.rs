@@ -48,11 +48,7 @@ impl CliCommand for CliNoteNew {
     }
 
     fn help(&self) -> CliHelpScreen {
-        let mut help = CliHelpScreen::new(
-            "Create New Note",
-            "nyx note new <NAME>",
-            "Creates a new  note",
-        );
+        let mut help = CliHelpScreen::new("Create New Note", "nyx note new <NAME>", "Creates a new  note");
 
         help.add_param(
             "NAME",

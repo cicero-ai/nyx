@@ -27,10 +27,7 @@ impl CliCommand for CliUserCopy {
         cli::check_exists("user", &req.args[1], false)?;
 
         // Copy user
-        rpc::send::<String, bool>(
-            "user.copy",
-            &vec![req.args[0].to_string(), req.args[1].to_string()],
-        )?;
+        rpc::send::<String, bool>("user.copy", &vec![req.args[0].to_string(), req.args[1].to_string()])?;
 
         cli_info!("Copied {} to {}\n", req.args[0], req.args[1]);
 
@@ -38,11 +35,7 @@ impl CliCommand for CliUserCopy {
     }
 
     fn help(&self) -> CliHelpScreen {
-        let mut help = CliHelpScreen::new(
-            "Copy User",
-            "nyx cp <SOURCE> <DEST>",
-            "Copy user to a new entry",
-        );
+        let mut help = CliHelpScreen::new("Copy User", "nyx cp <SOURCE> <DEST>", "Copy user to a new entry");
 
         help.add_param("SOURCE", "The source entry to copy from.");
         help.add_param("DEST", "The destination to copy the entry to.");

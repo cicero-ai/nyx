@@ -12,14 +12,13 @@ pub struct CliFileList {}
 
 impl CliCommand for CliFileList {
     fn process(&self, _req: &CliRequest) -> anyhow::Result<()> {
-
         // Send RPC
         let files: Vec<String> = rpc::send("file.list", &vec![&"".to_string()])?;
 
         // Display
         cli_header("Protected Files");
         for file in files {
-        cli_sendln!("{}", file);
+            cli_sendln!("{}", file);
         }
 
         Ok(())
@@ -29,7 +28,7 @@ impl CliCommand for CliFileList {
         let mut help = CliHelpScreen::new(
             "List Protected Files",
             "nyx file ls] [-n XX]",
-            "Lists all files currently under protection."
+            "Lists all files currently under protection.",
         );
 
         help.add_example("nyx file ls");

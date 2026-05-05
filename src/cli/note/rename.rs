@@ -27,10 +27,7 @@ impl CliCommand for CliNoteRename {
         cli::check_exists("note", &req.args[1], false)?;
 
         // Rename item
-        rpc::send::<String, bool>(
-            "note.rename",
-            &vec![req.args[0].to_string(), req.args[1].to_string()],
-        )?;
+        rpc::send::<String, bool>("note.rename", &vec![req.args[0].to_string(), req.args[1].to_string()])?;
 
         cli_info!("Renamed {} to {}\n", req.args[0], req.args[1]);
 
@@ -38,11 +35,7 @@ impl CliCommand for CliNoteRename {
     }
 
     fn help(&self) -> CliHelpScreen {
-        let mut help = CliHelpScreen::new(
-            "Rename Note",
-            "nyx note mv <SOURCE> <DEST>",
-            "Renames a note",
-        );
+        let mut help = CliHelpScreen::new("Rename Note", "nyx note mv <SOURCE> <DEST>", "Renames a note");
 
         help.add_param("SOURCE", "Name of existing entry to rename.");
         help.add_param("DEST", "Name of entry to rename the entry to.");

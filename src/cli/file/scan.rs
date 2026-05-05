@@ -4,27 +4,29 @@
 // Apache License text: https://www.apache.org/licenses/LICENSE-2.0
 // MIT License text: https://opensource.org/licenses/MIT
 
-use sha2::{Sha256, Digest};
+use crate::database::{ProtectedFile, file_credentials};
 use crate::error::Error;
 use crate::rpc;
-use crate::database::{file_credentials, ProtectedFile};
 use falcon_cli::*;
-use std::{fs, env};
-use std::path::{Path, PathBuf};
+use sha2::{Digest, Sha256};
 use std::os::unix::fs::PermissionsExt;
+use std::path::{Path, PathBuf};
+use std::{env, fs};
 
 #[derive(Default)]
-pub struct CliFileScan { }
+pub struct CliFileScan {}
 
 impl CliCommand for CliFileScan {
-
     fn process(&self, req: &CliRequest) -> anyhow::Result<()> {
         let mut found: Vec<(String, Vec<&'static str>)> = vec![];
-        let search = if req.args.is_empty() { "".to_string() } else { req.args[0].to_string() };
+        let search = if req.args.is_empty() {
+            "".to_string()
+        } else {
+            req.args[0].to_string()
+        };
         let candidates = file_credentials::get();
 
-        let config_dir = dirs::home_dir()
-            .ok_or_else(|| anyhow::anyhow!("Could not determine config directory"))?;
+        let config_dir = dirs::home_dir().ok_or_else(|| anyhow::anyhow!("Could not determine config directory"))?;
 
         for (name, apps) in candidates.iter() {
             if name.contains('*') {
@@ -40,29 +42,23 @@ impl CliCommand for CliFileScan {
                 };
 
                 if parent.is_dir()
-                    && let Ok(entries) = std::fs::read_dir(&parent) {
-                        for entry in entries.flatten() {
-                            let path = entry.path();
-                            if let Some(file_name) = path.file_name() {
-                                let file_name_str = file_name.to_string_lossy();
-                                if matches_wildcard(&file_pattern, &file_name_str)
-                                    && path.exists() {
-                                        found.push((
-                                            path.to_string_lossy().to_string(),
-                                            apps.clone(),
-                                        ));
-                                    }
+                    && let Ok(entries) = std::fs::read_dir(&parent)
+                {
+                    for entry in entries.flatten() {
+                        let path = entry.path();
+                        if let Some(file_name) = path.file_name() {
+                            let file_name_str = file_name.to_string_lossy();
+                            if matches_wildcard(&file_pattern, &file_name_str) && path.exists() {
+                                found.push((path.to_string_lossy().to_string(), apps.clone()));
                             }
                         }
                     }
+                }
             } else {
                 // Plain path, no wildcard
                 let full_path = config_dir.join(name);
                 if full_path.exists() {
-                    found.push((
-                        full_path.to_string_lossy().to_string(),
-                        apps.clone(),
-                    ));
+                    found.push((full_path.to_string_lossy().to_string(), apps.clone()));
                 }
             }
         }
@@ -73,10 +69,12 @@ impl CliCommand for CliFileScan {
         }
 
         let (mut num, mut res, mut queue) = (1, vec![], vec![]);
-        found.sort_by(|a,b| a.0.cmp(&b.0));
+        found.sort_by(|a, b| a.0.cmp(&b.0));
         for (path, apps) in found.iter() {
             let filename = path.replace(config_dir.to_str().unwrap(), "").trim_start_matches('/').to_string();
-            if (!search.is_empty()) && !filename.starts_with(&search) { continue; }
+            if (!search.is_empty()) && !filename.starts_with(&search) {
+                continue;
+            }
 
             res.push(vec![format!("{}", num), filename, apps.join(", ").to_string()]);
             queue.push((path.to_string(), apps.clone()));
@@ -94,7 +92,6 @@ impl CliCommand for CliFileScan {
 
         let mut files = vec![];
         for (full_path, apps) in queue {
-
             let whitelist = apps.iter().filter_map(|app| self.which(app)).collect::<Vec<String>>();
 
             let mut hasher = Sha256::new();
@@ -107,7 +104,7 @@ impl CliCommand for CliFileScan {
                 ino: 0,
                 is_protected: true,
                 contents: vec![],
-                whitelist
+                whitelist,
             });
         }
 
@@ -115,9 +112,7 @@ impl CliCommand for CliFileScan {
             .map_err(|e| CliError::Generic(format!("Unable to serialize JSON object: {}", e)))?;
 
         // Create item
-        if let Err(e) =
-            rpc::send::<&String, bool>("file.new", &vec![&file_str])
-        {
+        if let Err(e) = rpc::send::<&String, bool>("file.new", &vec![&file_str]) {
             return Err(Error::Generic(format!("Unable to protect file: {}", e)).into());
         }
 
@@ -133,10 +128,13 @@ impl CliCommand for CliFileScan {
         let mut help = CliHelpScreen::new(
             "Scan Potential Credential Files",
             "nyx scan <PARENT_DIR>",
-            "Scans your local folders for known credential files that should be protected."
+            "Scans your local folders for known credential files that should be protected.",
         );
 
-        help.add_param("PARENT_DIR", "Optional parent dir relative to home directory to serach in.");
+        help.add_param(
+            "PARENT_DIR",
+            "Optional parent dir relative to home directory to serach in.",
+        );
         help.add_example("nyx scan");
         help
     }
@@ -176,14 +174,17 @@ fn matches_wildcard(pattern: &str, name: &str) -> bool {
     true
 }
 
-
 impl CliFileScan {
-
     fn which(&self, binary: &str) -> Option<String> {
-
         if binary.contains('/') {
             let path = PathBuf::from(binary);
-            return if self.is_executable(&path) && let Some(res) = path.to_str() { Some(res.to_string()) } else { None };
+            return if self.is_executable(&path)
+                && let Some(res) = path.to_str()
+            {
+                Some(res.to_string())
+            } else {
+                None
+            };
         }
 
         let path_var = env::var_os("PATH")?;
@@ -192,7 +193,7 @@ impl CliFileScan {
             if self.is_executable(&candidate) {
                 let pbuf = match candidate.canonicalize() {
                     Ok(r) => r,
-                    Err(_) => candidate
+                    Err(_) => candidate,
                 };
                 return Some(pbuf.to_str()?.to_string());
             }
@@ -202,11 +203,6 @@ impl CliFileScan {
     }
 
     fn is_executable(&self, path: &Path) -> bool {
-        fs::metadata(path)
-            .map(|m| m.is_file() && (m.permissions().mode() & 0o111 != 0))
-            .unwrap_or(false)
+        fs::metadata(path).map(|m| m.is_file() && (m.permissions().mode() & 0o111 != 0)).unwrap_or(false)
     }
-
 }
-
-

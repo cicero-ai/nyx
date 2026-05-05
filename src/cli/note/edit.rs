@@ -39,11 +39,7 @@ impl CliCommand for CliNoteEdit {
     }
 
     fn help(&self) -> CliHelpScreen {
-        let mut help = CliHelpScreen::new(
-            "Edit Note",
-            "nyx note edit <NAME>",
-            "Edit details of a note",
-        );
+        let mut help = CliHelpScreen::new("Edit Note", "nyx note edit <NAME>", "Edit details of a note");
 
         help.add_param("NAME", "Name of the entry to edit.");
         help.add_example("nyx note edit mysite/cloudflare");

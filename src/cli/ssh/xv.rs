@@ -28,9 +28,8 @@ impl CliCommand for CliSshKeyXv {
         let ssh_key: SshKey = rpc::send("ssh.get", &vec![&req.args[0], &"1".to_string()])?;
 
         // Copy to clipboard
-        let privkey = String::from_utf8(ssh_key.private_key.clone()).map_err(|e| {
-            CliError::Generic(format!("Unable to encode private key to UTF-8: {}", e))
-        })?;
+        let privkey = String::from_utf8(ssh_key.private_key.clone())
+            .map_err(|e| CliError::Generic(format!("Unable to encode private key to UTF-8: {}", e)))?;
         clipboard::copy(&privkey)?;
 
         Ok(())

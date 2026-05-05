@@ -4,12 +4,12 @@
 // Apache License text: https://www.apache.org/licenses/LICENSE-2.0
 // MIT License text: https://opensource.org/licenses/MIT
 
-use super::{NyxDb, FilesDb};
+use super::{FilesDb, NyxDb};
 use fuser::{
-    FileType, Filesystem, KernelConfig, ReplyAttr, ReplyData, ReplyDirectory, ReplyEntry,
-    ReplyOpen, ReplyWrite, ReplyCreate, ReplyEmpty, Request,
+    FileType, Filesystem, KernelConfig, ReplyAttr, ReplyCreate, ReplyData, ReplyDirectory, ReplyEmpty, ReplyEntry,
+    ReplyOpen, ReplyWrite, Request,
 };
-use libc::{ENOENT, EACCES};
+use libc::{EACCES, ENOENT};
 use std::ffi::OsStr;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
@@ -48,30 +48,50 @@ impl Filesystem for NyxFs {
         _lock_owner: Option<u64>,
         reply: ReplyData,
     ) {
-        self.0.lock().unwrap().files.read(
-            _req,
-            ino,
-            _fh,
-            offset,
-            size,
-            flags,
-            _lock_owner,
-            reply,
-        )
+        self.0.lock().unwrap().files.read(_req, ino, _fh, offset, size, flags, _lock_owner, reply)
     }
 
     fn readdir(&mut self, _req: &Request, ino: u64, _fh: u64, offset: i64, reply: ReplyDirectory) {
         self.0.lock().unwrap().files.readdir(_req, ino, _fh, offset, reply)
     }
 
-    fn write(&mut self, _req: &Request, ino: u64, fh: u64, offset: i64, data: &[u8], write_flags: u32, flags: i32, lock_owner: Option<u64>, reply: ReplyWrite) {
+    fn write(
+        &mut self,
+        _req: &Request,
+        ino: u64,
+        fh: u64,
+        offset: i64,
+        data: &[u8],
+        write_flags: u32,
+        flags: i32,
+        lock_owner: Option<u64>,
+        reply: ReplyWrite,
+    ) {
         self.0.lock().unwrap().files.write(_req, ino, fh, offset, data, write_flags, flags, lock_owner, reply)
     }
 
-    fn setattr(&mut self, _req: &Request, ino: u64, mode: Option<u32>, uid: Option<u32>, gid: Option<u32>, size: Option<u64>, atime: Option<fuser::TimeOrNow>, mtime: Option<fuser::TimeOrNow>, ctime: Option<std::time::SystemTime>, fh: Option<u64>, crtime: Option<std::time::SystemTime>, chgtime: Option<std::time::SystemTime>, bkuptime: Option<std::time::SystemTime>, flags: Option<u32>, reply: ReplyAttr) {
-        self.0.lock().unwrap().files.setattr(_req, ino, mode, uid, gid, size, atime, mtime, ctime, fh, crtime, chgtime, bkuptime, flags, reply)
+    fn setattr(
+        &mut self,
+        _req: &Request,
+        ino: u64,
+        mode: Option<u32>,
+        uid: Option<u32>,
+        gid: Option<u32>,
+        size: Option<u64>,
+        atime: Option<fuser::TimeOrNow>,
+        mtime: Option<fuser::TimeOrNow>,
+        ctime: Option<std::time::SystemTime>,
+        fh: Option<u64>,
+        crtime: Option<std::time::SystemTime>,
+        chgtime: Option<std::time::SystemTime>,
+        bkuptime: Option<std::time::SystemTime>,
+        flags: Option<u32>,
+        reply: ReplyAttr,
+    ) {
+        self.0.lock().unwrap().files.setattr(
+            _req, ino, mode, uid, gid, size, atime, mtime, ctime, fh, crtime, chgtime, bkuptime, flags, reply,
+        )
     }
-
 }
 
 impl Filesystem for FilesDb {
@@ -111,7 +131,7 @@ impl Filesystem for FilesDb {
             }
         };
 
-       if let Some(attr) = self.get_attr(ino) {
+        if let Some(attr) = self.get_attr(ino) {
             reply.entry(&TTL, &attr, 0);
         } else {
             reply.error(ENOENT);
@@ -174,15 +194,7 @@ impl Filesystem for FilesDb {
     }
 
     /// Read directory  entries
-    fn readdir(
-        &mut self,
-        _req: &Request,
-        _ino: u64,
-        _fh: u64,
-        offset: i64,
-        mut reply: ReplyDirectory,
-    ) {
-
+    fn readdir(&mut self, _req: &Request, _ino: u64, _fh: u64, offset: i64, mut reply: ReplyDirectory) {
         // Root entries
         let mut entries = vec![
             (INO_ROOT, FileType::Directory, Path::new(".")),
@@ -205,13 +217,23 @@ impl Filesystem for FilesDb {
         reply.ok();
     }
 
-    fn write(&mut self, _req: &Request, ino: u64, _fh: u64, offset: i64, data: &[u8], _write_flags: u32, _flags: i32, _lock_owner: Option<u64>, reply: ReplyWrite) {
-
+    fn write(
+        &mut self,
+        _req: &Request,
+        ino: u64,
+        _fh: u64,
+        offset: i64,
+        data: &[u8],
+        _write_flags: u32,
+        _flags: i32,
+        _lock_owner: Option<u64>,
+        reply: ReplyWrite,
+    ) {
         let filename = match self.values().find(|f| f.ino == ino) {
             Some(r) => r.filename.to_string(),
             None => {
                 reply.error(ENOENT);
-                return
+                return;
             }
         };
 
@@ -228,7 +250,16 @@ impl Filesystem for FilesDb {
         }
     }
 
-    fn create(&mut self, _req: &Request, _parent: u64, _name: &OsStr, _mode: u32, _umask: u32, _flags: i32, reply: ReplyCreate) {
+    fn create(
+        &mut self,
+        _req: &Request,
+        _parent: u64,
+        _name: &OsStr,
+        _mode: u32,
+        _umask: u32,
+        _flags: i32,
+        reply: ReplyCreate,
+    ) {
         reply.error(EACCES);
     }
 
@@ -254,12 +285,11 @@ impl Filesystem for FilesDb {
         _flags: Option<u32>,
         reply: ReplyAttr,
     ) {
-
         let filename = match self.values().find(|f| f.ino == ino) {
             Some(r) => r.filename.to_string(),
             None => {
                 reply.error(ENOENT);
-                return
+                return;
             }
         };
 
@@ -285,5 +315,4 @@ impl Filesystem for FilesDb {
     fn fsync(&mut self, _req: &Request, _ino: u64, _fh: u64, _datasync: bool, reply: fuser::ReplyEmpty) {
         reply.ok();
     }
-
 }

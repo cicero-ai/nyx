@@ -8,32 +8,28 @@ use crate::rpc;
 use falcon_cli::*;
 
 use self::db::{
-    CliDbBackup, CliDbChangePass, CliDbClose, CliDbCreate, CliDbHistory, CliDbOpen, CliDbRestore,
-    CliDbStats,
+    CliDbBackup, CliDbChangePass, CliDbClose, CliDbCreate, CliDbHistory, CliDbOpen, CliDbRestore, CliDbStats,
 };
-use self::file::{CliFileList, CliFileProtect, CliFileRestore, CliFileFreeze, CliFileEdit, CliFileScan};
+use self::file::{CliFileEdit, CliFileFreeze, CliFileList, CliFileProtect, CliFileRestore, CliFileScan};
 use self::note::{
-    CliNoteCopy, CliNoteDelete, CliNoteEdit, CliNoteFind, CliNoteList, CliNoteNew, CliNoteRename,
-    CliNoteShow, CliNoteXn,
+    CliNoteCopy, CliNoteDelete, CliNoteEdit, CliNoteFind, CliNoteList, CliNoteNew, CliNoteRename, CliNoteShow,
+    CliNoteXn,
 };
 use self::otp::{
-    CliOtpCopy, CliOtpDelete, CliOtpEdit, CliOtpFind, CliOtpGenerate, CliOtpList, CliOtpNew,
-    CliOtpRename, CliOtpShow, CliOtpXp, CliOtpXr, CliOtpXw,
+    CliOtpCopy, CliOtpDelete, CliOtpEdit, CliOtpFind, CliOtpGenerate, CliOtpList, CliOtpNew, CliOtpRename, CliOtpShow,
+    CliOtpXp, CliOtpXr, CliOtpXw,
 };
 use self::ssh::{
-    CliSshKeyCopy, CliSshKeyDelete, CliSshKeyEdit, CliSshKeyFind, CliSshKeyGenerate,
-    CliSshKeyImport, CliSshKeyList, CliSshKeyRename, CliSshKeyShow, CliSshKeyXb, CliSshKeyXh,
-    CliSshKeyXp, CliSshKeyXu, CliSshKeyXv,
+    CliSshKeyCopy, CliSshKeyDelete, CliSshKeyEdit, CliSshKeyFind, CliSshKeyGenerate, CliSshKeyImport, CliSshKeyList,
+    CliSshKeyRename, CliSshKeyShow, CliSshKeyXb, CliSshKeyXh, CliSshKeyXp, CliSshKeyXu, CliSshKeyXv,
 };
-use self::str::{
-    CliStrCopy, CliStrDelete, CliStrFind, CliStrGet, CliStrList, CliStrRename, CliStrSet,
-};
+use self::str::{CliStrCopy, CliStrDelete, CliStrFind, CliStrGet, CliStrList, CliStrRename, CliStrSet};
 use self::user::{
-    CliUserCopy, CliUserDelete, CliUserEdit, CliUserFind, CliUserList, CliUserNew, CliUserRename,
-    CliUserShow, CliUserXp, CliUserXu, CliUserXw,
+    CliUserCopy, CliUserDelete, CliUserEdit, CliUserFind, CliUserList, CliUserNew, CliUserRename, CliUserShow,
+    CliUserXp, CliUserXu, CliUserXw,
 };
 
-#[cfg(feature="testutil")]
+#[cfg(feature = "testutil")]
 use self::test::CliTest;
 
 pub mod clipboard;
@@ -45,17 +41,25 @@ mod ssh;
 mod str;
 mod user;
 
-#[cfg(feature="testutil")]
+#[cfg(feature = "testutil")]
 mod test;
 
 /// Boot CLI router and define available commands
 pub fn boot() -> CliRouter {
     let mut router = CliRouter::new();
     router.app_name("Nyx");
-    router.version_message(&format!("Nyx v{} - Secure CLI password & key manager\nDeveloped by Aquila Labs - https://aquila-labs.ca/latest", env!("CARGO_PKG_VERSION")));
+    router.version_message(&format!(
+        "Nyx v{} - Secure CLI password & key manager\nDeveloped by Aquila Labs - https://aquila-labs.ca/latest",
+        env!("CARGO_PKG_VERSION")
+    ));
 
     router.global("-f", "--dbfile", true, "Location of Nyx database file.");
-    router.global("-t", "--timeout", true, "Time of inactivity to lock database (eg. 3h = 3 hours, 15m = 15 minutes, 60s = 60 seconds)");
+    router.global(
+        "-t",
+        "--timeout",
+        true,
+        "Time of inactivity to lock database (eg. 3h = 3 hours, 15m = 15 minutes, 60s = 60 seconds)",
+    );
     router.global(
         "-c",
         "--cb-timeout",
@@ -146,7 +150,7 @@ pub fn boot() -> CliRouter {
     router.add::<CliNoteXn>("note xn", vec![], vec![]);
 
     // Files
-    #[cfg(any(target_os="linux", feature = "fuse"))]
+    #[cfg(any(target_os = "linux", feature = "fuse"))]
     {
         router.add_category("file", "Files", "Protect sensitive credential files.");
         router.add::<CliFileEdit>("file edit", vec![], vec![]);
@@ -158,7 +162,7 @@ pub fn boot() -> CliRouter {
     }
 
     // Test utils
-    #[cfg(feature="testutil")]
+    #[cfg(feature = "testutil")]
     {
         router.add::<CliTest>("test", vec![], vec![]);
     }
@@ -170,8 +174,7 @@ pub fn boot() -> CliRouter {
 pub fn check_exists(category: &str, item_name: &str, expected_bool: bool) -> Result<(), CliError> {
     let method_name = format!("{}.exists", category);
 
-    let exists: bool =
-        rpc::send(&method_name, &vec![item_name]).map_err(|e| CliError::Generic(e.to_string()))?;
+    let exists: bool = rpc::send(&method_name, &vec![item_name]).map_err(|e| CliError::Generic(e.to_string()))?;
 
     if exists && !expected_bool {
         return Err(CliError::Generic(format!(

@@ -8,9 +8,9 @@ use crate::cli;
 use crate::database::SshKey;
 use crate::error::Error;
 use crate::rpc;
+use argon2::{Algorithm, Argon2, Params, Version};
 use falcon_cli::*;
 use rand::rngs::OsRng;
-use argon2::{Argon2, Params, Version, Algorithm};
 use ssh_key::private::Ed25519Keypair;
 use ssh_key::private::Ed25519PrivateKey;
 use ssh_key::{LineEnding, PrivateKey};
@@ -47,16 +47,14 @@ impl CliCommand for CliSshKeyGenerate {
             PrivateKey::from(ed25519_keypair)
         };
 
-        let private_key = privkey.to_openssh(LineEnding::LF)
+        let private_key = privkey
+            .to_openssh(LineEnding::LF)
             .map_err(|e| Error::Validate(format!("Unable to convert SSH key to OpenSSH format: {}", e)))?;
 
-        let public_key = privkey.public_key().to_openssh().map_err(|e| {
-            Error::Validate(format!(
-                "Unable to convert private SSH key to public: {}",
-                e
-            ))
-        })?;
-
+        let public_key = privkey
+            .public_key()
+            .to_openssh()
+            .map_err(|e| Error::Validate(format!("Unable to convert private SSH key to public: {}", e)))?;
 
         // Instantiate item
         let ssh_key = SshKey {
@@ -74,9 +72,7 @@ impl CliCommand for CliSshKeyGenerate {
             .map_err(|e| CliError::Generic(format!("Unable to serialize JSON object: {}", e)))?;
 
         // Create item
-        if let Err(e) =
-            rpc::send::<&String, bool>("ssh.import", &vec![&req.args[0].to_lowercase(), &key_str])
-        {
+        if let Err(e) = rpc::send::<&String, bool>("ssh.import", &vec![&req.args[0].to_lowercase(), &key_str]) {
             return Err(Error::Generic(format!("Unable to create new SSH key: {}", e)).into());
         }
 
@@ -100,31 +96,23 @@ impl CliCommand for CliSshKeyGenerate {
 }
 
 impl CliSshKeyGenerate {
-
     fn generate_deterministic_key(&self) -> Result<PrivateKey, Error> {
-
-        cli_sendln!("Enter the pass phrase / seed to generate the SSH key with.  In the future, you may re-generate the exact same SSH key using this pass phrase / seed.\n");
+        cli_sendln!(
+            "Enter the pass phrase / seed to generate the SSH key with.  In the future, you may re-generate the exact same SSH key using this pass phrase / seed.\n"
+        );
         let passphrase = cli_get_password("Passphrase: ", false);
-        let salt  = "NyxPass_1.0";
+        let salt = "NyxPass_1.0";
 
         // Configure Argon2id — tune these for your threat model
-        let params = Params::new(
-            64 * 1024,
-            3,
-            1,
-            Some(32),
-        ).map_err(|e| Error::Validate(format!("Argon2 params error: {}", e)))?;
+        let params = Params::new(64 * 1024, 3, 1, Some(32))
+            .map_err(|e| Error::Validate(format!("Argon2 params error: {}", e)))?;
 
         let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
 
         // Derive 32 bytes of key material
         let mut seed = [0u8; 32];
         argon2
-            .hash_password_into(
-                passphrase.as_bytes(),
-                salt.as_bytes(),
-                &mut seed,
-            )
+            .hash_password_into(passphrase.as_bytes(), salt.as_bytes(), &mut seed)
             .map_err(|e| Error::Validate(format!("Key derivation failed: {}", e)))?;
 
         // Build Ed25519 keypair directly from the seed bytes
@@ -135,5 +123,3 @@ impl CliSshKeyGenerate {
         Ok(privkey)
     }
 }
-
-

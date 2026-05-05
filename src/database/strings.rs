@@ -33,8 +33,7 @@ impl BaseDbItem for StrItem {
     }
 
     fn contains(&self, search: &str) -> bool {
-        self.display_name.to_lowercase().contains(search)
-            || self.value.to_lowercase().contains(search)
+        self.display_name.to_lowercase().contains(search) || self.value.to_lowercase().contains(search)
     }
 }
 
@@ -67,6 +66,3 @@ impl Drop for StringsDb {
         self.zeroize();
     }
 }
-
-
-

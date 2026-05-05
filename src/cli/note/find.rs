@@ -36,8 +36,7 @@ impl CliCommand for CliNoteFind {
     }
 
     fn help(&self) -> CliHelpScreen {
-        let mut help =
-            CliHelpScreen::new("Search Notes", "nyx note find <TEXT>", "Search all notes");
+        let mut help = CliHelpScreen::new("Search Notes", "nyx note find <TEXT>", "Search all notes");
 
         help.add_param("TEXT", "The text to search all entries for.");
         help.add_example("nyx note find my-username");

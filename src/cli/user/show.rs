@@ -42,11 +42,7 @@ impl CliCommand for CliUserShow {
     }
 
     fn help(&self) -> CliHelpScreen {
-        let mut help = CliHelpScreen::new(
-            "Show User Details",
-            "nyx show <NAME>",
-            "Displays all details on user",
-        );
+        let mut help = CliHelpScreen::new("Show User Details", "nyx show <NAME>", "Displays all details on user");
 
         help.add_param("NAME", "Name of entry to show details of.");
         help.add_example("nyx show mysite/cloudflare");

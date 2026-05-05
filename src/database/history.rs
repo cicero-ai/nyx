@@ -8,11 +8,11 @@ use crate::Error;
 use crate::rpc::{CmdResponse, message};
 use bincode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
-use zeroize::{Zeroize, ZeroizeOnDrop};
 use std::fmt;
 use std::ops::{Deref, DerefMut};
 use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
 #[derive(Default, Decode, Encode, Zeroize, ZeroizeOnDrop)]
 pub struct HistoryDb(pub Vec<HistoryItem>);
@@ -73,14 +73,8 @@ impl HistoryDb {
     }
 
     /// List items
-    pub fn list_items(
-        &mut self,
-        req_id: usize,
-        params: &Vec<String>,
-    ) -> Result<CmdResponse, Error> {
-        let start = params[0]
-            .parse::<usize>()
-            .map_err(|e| Error::Validate(format!("Invalid start number: {}", e)))?;
+    pub fn list_items(&mut self, req_id: usize, params: &Vec<String>) -> Result<CmdResponse, Error> {
+        let start = params[0].parse::<usize>().map_err(|e| Error::Validate(format!("Invalid start number: {}", e)))?;
 
         let end = (start + 25).min(self.len());
 
@@ -111,7 +105,7 @@ impl FromStr for HistoryAction {
             "edit" => Ok(Self::Update),
             "copy" => Ok(Self::Copy),
             "delete" => Ok(Self::Delete),
-            "new" | "import" | "generate"|"set" => Ok(Self::Create),
+            "new" | "import" | "generate" | "set" => Ok(Self::Create),
             "rename" => Ok(Self::Rename),
             _ => Err(Error::Validate(format!("No history action for: {}", s))),
         }

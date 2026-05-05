@@ -70,17 +70,12 @@ pub fn get_db_filename(allow_create: bool) -> LoaderResponse {
     // User message
     cli_info!("No Nyx database found. Please specify the database location:\n");
     if allow_create {
-        cli_info!(
-            "Enter path to existing database or where to create new one (press Enter for default):\n"
-        );
+        cli_info!("Enter path to existing database or where to create new one (press Enter for default):\n");
     }
 
     // Get file
     let dbfile = if allow_create {
-        cli_get_input(
-            &format!("Database Location [{}]: ", default_dbfile),
-            &default_dbfile,
-        )
+        cli_get_input(&format!("Database Location [{}]: ", default_dbfile), &default_dbfile)
     } else {
         cli_get_input("Database Location [nyx.db]: ", "nyx.db")
     };
@@ -152,15 +147,10 @@ pub fn create_database(dbfile: &str) -> [u8; 32] {
     cli_send!("\n");
 
     // Save phrase
-    cli_send!(
-        "Optionally, you may save the phrase to a file by specifying its location below.\n\n"
-    );
+    cli_send!("Optionally, you may save the phrase to a file by specifying its location below.\n\n");
     let phrase_file = cli_get_input("File Location: ", "");
     if !phrase_file.is_empty()
-        && let Err(e) = fs::write(
-            &phrase_file,
-            format!("# Nyx Recovery Phrase\n\n{}\n", words.join(" ")),
-        )
+        && let Err(e) = fs::write(&phrase_file, format!("# Nyx Recovery Phrase\n\n{}\n", words.join(" ")))
     {
         cli_error!("Unable to save phrase file: {}", e);
         exit(1);

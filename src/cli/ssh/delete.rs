@@ -32,8 +32,7 @@ impl CliCommand for CliSshKeyDelete {
     }
 
     fn help(&self) -> CliHelpScreen {
-        let mut help =
-            CliHelpScreen::new("Delete SSH Key", "nyx ssh rm <NAME>", "Deletes an SSH key");
+        let mut help = CliHelpScreen::new("Delete SSH Key", "nyx ssh rm <NAME>", "Deletes an SSH key");
 
         help.add_param("NAME", "Name of the entry to delete.");
         help.add_example("nyx ssh rm mysite/cloudflare");

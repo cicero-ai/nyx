@@ -32,8 +32,7 @@ impl CliCommand for CliStrDelete {
     }
 
     fn help(&self) -> CliHelpScreen {
-        let mut help =
-            CliHelpScreen::new("Delete String", "nyx str rm <NAME>", "Deletes an string");
+        let mut help = CliHelpScreen::new("Delete String", "nyx str rm <NAME>", "Deletes an string");
 
         help.add_param("NAME", "Name of the entry to delete.");
         help.add_example("nyx str rm mysite/cloudflare");

@@ -22,7 +22,6 @@ pub struct Note {
 
 impl BaseDbFunctions for NotesDb {
     type Item = Note;
-
 }
 
 impl BaseDbItem for Note {
@@ -34,8 +33,7 @@ impl BaseDbItem for Note {
     }
 
     fn contains(&self, search: &str) -> bool {
-        self.display_name.to_lowercase().contains(search)
-            || self.note.to_lowercase().contains(search)
+        self.display_name.to_lowercase().contains(search) || self.note.to_lowercase().contains(search)
     }
 }
 
@@ -68,6 +66,3 @@ impl Drop for NotesDb {
         self.zeroize();
     }
 }
-
-
-

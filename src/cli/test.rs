@@ -4,12 +4,12 @@
 // Apache License text: https://www.apache.org/licenses/LICENSE-2.0
 // MIT License text: https://opensource.org/licenses/MIT
 
+use crate::Error;
+use crate::database::{DatabaseTimeout, NyxDb};
 use crate::rpc::launcher;
 use crate::security::crypto;
-use std::time::Duration;
-use crate::database::{NyxDb, DatabaseTimeout};
 use falcon_cli::*;
-use crate::Error;
+use std::time::Duration;
 
 #[derive(Default)]
 pub struct CliTest {}
@@ -20,7 +20,7 @@ impl CliCommand for CliTest {
 
         match req.args[0].as_str() {
             "createdb" => self.create_db(&req),
-            _ => Err(Error::Generic(format!("Invalid action, {}", req.args[0])).into())
+            _ => Err(Error::Generic(format!("Invalid action, {}", req.args[0])).into()),
         }
     }
 
@@ -34,16 +34,14 @@ impl CliCommand for CliTest {
 }
 
 impl CliTest {
-    fn create_db(&self, req: &CliRequest)  -> anyhow::Result<()> {
-
+    fn create_db(&self, req: &CliRequest) -> anyhow::Result<()> {
         // Create database
         let timeout = DatabaseTimeout::Duration(Duration::from_secs(300));
         let _db = NyxDb::create(&req.args[1], &req.args[2], timeout)?;
         let n_password = crypto::normalize_password(&req.args[2]);
 
         launcher::launch(&req.args[1], n_password)?;
-    cli_info!("Database created at {}", req.args[1]);
+        cli_info!("Database created at {}", req.args[1]);
         Ok(())
     }
 }
-

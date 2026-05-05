@@ -42,11 +42,7 @@ impl CliCommand for CliStrSet {
     }
 
     fn help(&self) -> CliHelpScreen {
-        let mut help = CliHelpScreen::new(
-            "Create New String",
-            "nyx set <NAME>",
-            "Creates a new string entry.",
-        );
+        let mut help = CliHelpScreen::new("Create New String", "nyx set <NAME>", "Creates a new string entry.");
 
         help.add_param(
             "NAME",

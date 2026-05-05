@@ -4,23 +4,22 @@
 // Apache License text: https://www.apache.org/licenses/LICENSE-2.0
 // MIT License text: https://opensource.org/licenses/MIT
 
+use crate::Error;
 use falcon_cli::*;
 use std::io::Write;
 use std::process::{Command, Stdio};
-use crate::Error;
 
 /// Copy text to clipboard
 pub fn copy(text: &str) -> Result<(), Error> {
-
     // Get available tools to try
     let mut _tools: Vec<(&str, Vec<&str>)> = vec![];
 
     #[cfg(target_os = "linux")]
     {
-            _tools = vec![
+        _tools = vec![
             ("xclip", vec!["-selection", "clipboard", "-i"]),
             ("xsel", vec!["--clipboard", "--input"]),
-            ("wl-copy", vec![])
+            ("wl-copy", vec![]),
         ];
     }
 
@@ -36,20 +35,17 @@ pub fn copy(text: &str) -> Result<(), Error> {
 
     // Iterate through tools
     for (cmd, args) in &_tools {
-        if let Ok(mut child) = Command::new(cmd)
-            .args(args)
-            .stdin(Stdio::piped())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .spawn()
+        if let Ok(mut child) =
+            Command::new(cmd).args(args).stdin(Stdio::piped()).stdout(Stdio::null()).stderr(Stdio::null()).spawn()
             && let Some(mut stdin) = child.stdin.take()
-                && stdin.write_all(text.as_bytes()).is_ok() {
-                    drop(stdin);
-                    if child.wait().map(|s| s.success()).unwrap_or(false) {
-                        cli_sendln!("Copied to clipboard");
-                        return Ok(());
-                    }
-                }
+            && stdin.write_all(text.as_bytes()).is_ok()
+        {
+            drop(stdin);
+            if child.wait().map(|s| s.success()).unwrap_or(false) {
+                cli_sendln!("Copied to clipboard");
+                return Ok(());
+            }
+        }
     }
 
     // Failed
@@ -73,11 +69,7 @@ pub fn clear() {
         pipe_to_cmd("xsel", &["--clipboard", "--clear"], b"");
         pipe_to_cmd("xsel", &["--primary", "--clear"], b"");
         // Wayland: --clear relinquishes ownership properly (no empty-string hack)
-        let _ = Command::new("wl-copy")
-            .arg("--clear")
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status();
+        let _ = Command::new("wl-copy").arg("--clear").stdout(Stdio::null()).stderr(Stdio::null()).status();
     }
 
     #[cfg(target_os = "macos")]
@@ -94,15 +86,12 @@ pub fn clear() {
 
 /// Pipe bytes into a command's stdin. Silently ignores failures (tool may not be installed).
 fn pipe_to_cmd(cmd: &str, args: &[&str], data: &[u8]) {
-    if let Ok(mut child) = Command::new(cmd)
-        .args(args)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()
-        && let Some(mut stdin) = child.stdin.take() {
-            let _ = stdin.write_all(data);
-            drop(stdin);
-            let _ = child.wait();
-        }
+    if let Ok(mut child) =
+        Command::new(cmd).args(args).stdin(Stdio::piped()).stdout(Stdio::null()).stderr(Stdio::null()).spawn()
+        && let Some(mut stdin) = child.stdin.take()
+    {
+        let _ = stdin.write_all(data);
+        drop(stdin);
+        let _ = child.wait();
+    }
 }

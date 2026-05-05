@@ -15,7 +15,9 @@ use std::sync::Arc;
 /// Mount to fuse directory
 pub fn mount(daemon: &RpcDaemon) -> Result<(), Error> {
     let Some(fuse_dir) = get_mount_dir() else {
-        return Err(Error::Generic("Unable to mount fuse point, as there is no system data directory".to_string()))
+        return Err(Error::Generic(
+            "Unable to mount fuse point, as there is no system data directory".to_string(),
+        ));
     };
 
     if !Path::new(&fuse_dir).exists() {
@@ -71,7 +73,7 @@ fn is_auto_unmount_enabled() -> bool {
 
 /// Check whether or not directory is an orphaned mount point
 pub fn is_mount_point() -> bool {
-    let Some(path) =  get_mount_dir() else { return false };
+    let Some(path) = get_mount_dir() else { return false };
     #[cfg(target_os = "linux")]
     {
         // Check /proc/mounts
@@ -98,8 +100,7 @@ pub fn unmount() -> Result<(), Error> {
     let Some(fuse_dir) = get_mount_dir() else { return Ok(()) };
 
     // Try regular unmoun first
-    let unmount_result =
-        std::process::Command::new("fusermount").arg("-u").arg(&fuse_dir).output();
+    let unmount_result = std::process::Command::new("fusermount").arg("-u").arg(&fuse_dir).output();
 
     if let Ok(output) = unmount_result
         && output.status.success()
@@ -108,11 +109,8 @@ pub fn unmount() -> Result<(), Error> {
     }
 
     // Use sudo
-    cli_send!(
-        "An orphaned mount point from a previous session has been detected, and needs to be unmounted.\n"
-    );
-    let sudo_result =
-        std::process::Command::new("sudo").arg("umount").arg(&fuse_dir).status();
+    cli_send!("An orphaned mount point from a previous session has been detected, and needs to be unmounted.\n");
+    let sudo_result = std::process::Command::new("sudo").arg("umount").arg(&fuse_dir).status();
 
     if let Ok(status) = sudo_result
         && !status.success()
@@ -148,14 +146,15 @@ pub fn check_mount_successful() {
     }
     #[cfg(target_os = "macos")]
     {
-        let macfuse_installed = Path::new("/Library/Filesystems/macfuse.fs").exists() 
+        let macfuse_installed = Path::new("/Library/Filesystems/macfuse.fs").exists()
             || Path::new("/Library/Filesystems/osxfuse.fs").exists();
-        
+
         if !macfuse_installed {
-            cli_warn!("MacFUSE is not installed, to resolve visit https://macfuse.github.io/ for installation instructions.\n");
+            cli_warn!(
+                "MacFUSE is not installed, to resolve visit https://macfuse.github.io/ for installation instructions.\n"
+            );
         } else {
             cli_warn!("MacFUSE appears to be installed, unknown error.\n");
         }
     }
 }
-

@@ -36,11 +36,7 @@ impl CliCommand for CliSshKeyFind {
     }
 
     fn help(&self) -> CliHelpScreen {
-        let mut help = CliHelpScreen::new(
-            "Search SSH Keys",
-            "nyx ssh find <TEXT>",
-            "Search all SSH keys",
-        );
+        let mut help = CliHelpScreen::new("Search SSH Keys", "nyx ssh find <TEXT>", "Search all SSH keys");
 
         help.add_param("TEXT", "The text to search all entries for.");
         help.add_example("nyx ssh find my-username");

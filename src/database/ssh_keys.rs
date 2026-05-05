@@ -14,7 +14,7 @@ use std::ops::{Deref, DerefMut};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 #[derive(Default, Encode, Decode)]
-pub struct SshKeysDb (pub HashMap<String, SshKey>);
+pub struct SshKeysDb(pub HashMap<String, SshKey>);
 
 #[derive(Clone, Encode, Decode, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
 pub struct SshKey {
@@ -62,19 +62,12 @@ impl SshKeysDb {
         Ok(CmdResponse::new(true, false, message::ok(req_id, true)))
     }
     /// Delete item
-    pub fn delete_key(
-        &mut self,
-        req_id: usize,
-        params: &Vec<String>,
-    ) -> Result<CmdResponse, Error> {
+    pub fn delete_key(&mut self, req_id: usize, params: &Vec<String>) -> Result<CmdResponse, Error> {
         // Validate
         if params.is_empty() {
             return Err(Error::Validate("Invalid parameters.".to_string()));
         } else if !self.contains_key(&params[0].to_lowercase()) {
-            return Err(Error::Validate(format!(
-                "No entry to delete exists at {}",
-                params[0]
-            )));
+            return Err(Error::Validate(format!("No entry to delete exists at {}", params[0])));
         }
 
         // Delete
@@ -91,10 +84,7 @@ impl SshKeysDb {
 
         // Check if exists
         if self.contains_key(&params[0].to_lowercase()) {
-            return Err(Error::Validate(format!(
-                "Entry already exists, {}",
-                params[0]
-            )));
+            return Err(Error::Validate(format!("Entry already exists, {}", params[0])));
         }
 
         // Insert
@@ -103,11 +93,7 @@ impl SshKeysDb {
     }
 
     /// Rename item
-    pub fn rename_key(
-        &mut self,
-        req_id: usize,
-        params: &Vec<String>,
-    ) -> Result<CmdResponse, Error> {
+    pub fn rename_key(&mut self, req_id: usize, params: &Vec<String>) -> Result<CmdResponse, Error> {
         // Validate
         if params.len() < 2 {
             return Err(Error::Validate("Invalid parameters.".to_string()));
@@ -121,10 +107,7 @@ impl SshKeysDb {
         // Get item
         let item = self
             .get(&params[0].to_lowercase())
-            .ok_or(Error::Validate(format!(
-                "No entry exists at, {}",
-                params[0]
-            )))?
+            .ok_or(Error::Validate(format!("No entry exists at, {}", params[0])))?
             .clone();
 
         // Rename
@@ -152,8 +135,7 @@ impl BaseDbItem for SshKey {
     }
 
     fn contains(&self, search: &str) -> bool {
-        self.display_name.to_lowercase().contains(search)
-            || self.host.to_lowercase().contains(search)
+        self.display_name.to_lowercase().contains(search) || self.host.to_lowercase().contains(search)
     }
 }
 
@@ -186,6 +168,3 @@ impl Drop for SshKeysDb {
         self.zeroize();
     }
 }
-
-
-

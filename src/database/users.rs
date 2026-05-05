@@ -71,6 +71,3 @@ impl Drop for UsersDb {
         self.zeroize();
     }
 }
-
-
-

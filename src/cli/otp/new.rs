@@ -51,11 +51,7 @@ impl CliCommand for CliOtpNew {
     }
 
     fn help(&self) -> CliHelpScreen {
-        let mut help = CliHelpScreen::new(
-            "Create New OTP Entry",
-            "nyx otp new <NAME>",
-            "Creates a new OTP entry.",
-        );
+        let mut help = CliHelpScreen::new("Create New OTP Entry", "nyx otp new <NAME>", "Creates a new OTP entry.");
 
         help.add_param(
             "NAME",

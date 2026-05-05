@@ -30,14 +30,13 @@ impl OtpDb {
     /// Generate OTP code
     pub fn generate(&mut self, req_id: usize, params: &Vec<String>) -> Result<CmdResponse, Error> {
         // Get oath
-        let oauth = self.get(&params[0].to_lowercase()).ok_or(Error::Validate(format!(
-            "Entry does not exist at, {}",
-            params[0]
-        )))?;
+        let oauth = self
+            .get(&params[0].to_lowercase())
+            .ok_or(Error::Validate(format!("Entry does not exist at, {}", params[0])))?;
 
         // Get totp client
-        let client = TOTP::from_base32(&oauth.secret_code)
-            .ok_or(Error::Rpc("Unable to initialize TOTP".to_string()))?;
+        let client =
+            TOTP::from_base32(&oauth.secret_code).ok_or(Error::Rpc("Unable to initialize TOTP".to_string()))?;
 
         let current_time = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
         // Generate OTP
@@ -60,8 +59,7 @@ impl BaseDbItem for Otp {
     }
 
     fn contains(&self, search: &str) -> bool {
-        self.display_name.to_lowercase().contains(search)
-            || self.url.to_lowercase().contains(search)
+        self.display_name.to_lowercase().contains(search) || self.url.to_lowercase().contains(search)
     }
 }
 
@@ -94,6 +92,3 @@ impl Drop for OtpDb {
         self.zeroize();
     }
 }
-
-
-

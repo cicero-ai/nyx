@@ -33,10 +33,7 @@ where
 
         // Check if exists
         if self.contains_key(&params[0].to_lowercase()) {
-            return Err(Error::Validate(format!(
-                "Entry already exists, {}",
-                params[0]
-            )));
+            return Err(Error::Validate(format!("Entry already exists, {}", params[0])));
         }
 
         // Insert
@@ -77,10 +74,7 @@ where
         if params.is_empty() {
             return Err(Error::Validate("Invalid parameters.".to_string()));
         } else if !self.contains_key(&params[0].to_lowercase()) {
-            return Err(Error::Validate(format!(
-                "No entry to delete exists at {}",
-                params[0]
-            )));
+            return Err(Error::Validate(format!("No entry to delete exists at {}", params[0])));
         }
 
         // Delete
@@ -94,10 +88,7 @@ where
         if params.is_empty() {
             return Err(Error::Validate("Invalid parameters.".to_string()));
         } else if !self.contains_key(&params[0].to_lowercase()) {
-            return Err(Error::Validate(format!(
-                "No entry to edit exists at, {}",
-                params[0]
-            )));
+            return Err(Error::Validate(format!("No entry to edit exists at, {}", params[0])));
         }
 
         // Decode JSON
@@ -129,11 +120,8 @@ where
         let search = params[0].to_lowercase();
 
         // Get items
-        let mut items: Vec<String> = self
-            .values()
-            .filter(|&item| item.contains(&search))
-            .map(|item| item.get_name())
-            .collect();
+        let mut items: Vec<String> =
+            self.values().filter(|&item| item.contains(&search)).map(|item| item.get_name()).collect();
 
         // Sort and reply
         items.sort();
@@ -147,10 +135,8 @@ where
         }
 
         // Get item
-        let item = self.get(&params[0].to_lowercase()).ok_or(Error::Validate(format!(
-            "No entry exists at, {}",
-            params[0]
-        )))?;
+        let item =
+            self.get(&params[0].to_lowercase()).ok_or(Error::Validate(format!("No entry exists at, {}", params[0])))?;
 
         // Check if password copied
         let is_copy = params.len() > 1 && params[1].as_str() == "1";
@@ -220,10 +206,8 @@ where
         }
 
         // Get item
-        let item = self.get(&params[0].to_lowercase()).ok_or(Error::Validate(format!(
-            "No entry exists at, {}",
-            params[0]
-        )))?;
+        let item =
+            self.get(&params[0].to_lowercase()).ok_or(Error::Validate(format!("No entry exists at, {}", params[0])))?;
 
         // Copy
         let mut new_item = item.clone();

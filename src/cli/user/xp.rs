@@ -33,11 +33,7 @@ impl CliCommand for CliUserXp {
     }
 
     fn help(&self) -> CliHelpScreen {
-        let mut help = CliHelpScreen::new(
-            "Copy User Password",
-            "nyx xp <NAME>",
-            "Copy user password to clipboard",
-        );
+        let mut help = CliHelpScreen::new("Copy User Password", "nyx xp <NAME>", "Copy user password to clipboard");
 
         help.add_param("NAME", "Name of entry to copy from.");
         help.add_example("nyx xp mysite/cloudflare");

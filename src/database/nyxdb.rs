@@ -4,7 +4,7 @@
 // Apache License text: https://www.apache.org/licenses/LICENSE-2.0
 // MIT License text: https://opensource.org/licenses/MIT
 
-use super::{BaseDbFunctions, HistoryDb, NotesDb, OtpDb, SshKeysDb, StringsDb, UsersDb, FilesDb};
+use super::{BaseDbFunctions, FilesDb, HistoryDb, NotesDb, OtpDb, SshKeysDb, StringsDb, UsersDb};
 use crate::Error;
 use crate::security::SecureBuffer;
 use crate::security::crypto;
@@ -52,11 +52,7 @@ pub struct DbStats {
 
 impl NyxDb {
     /// Create new database
-    pub fn create(
-        filename: &str,
-        password: &str,
-        default_timeout: DatabaseTimeout,
-    ) -> Result<Self, Error> {
+    pub fn create(filename: &str, password: &str, default_timeout: DatabaseTimeout) -> Result<Self, Error> {
         let mut db = Self {
             default_timeout,
             users: UsersDb::default(),
@@ -65,7 +61,7 @@ impl NyxDb {
             notes: NotesDb::default(),
             strings: StringsDb::default(),
             files: FilesDb::default(),
-            history: HistoryDb::default()
+            history: HistoryDb::default(),
         };
 
         // Save
@@ -75,12 +71,7 @@ impl NyxDb {
     }
 
     /// Save data store
-    pub fn save(
-        &mut self,
-        dbfile: &str,
-        n_password: [u8; 32],
-        master_key: Option<[u8; 32]>,
-    ) -> Result<(), Error> {
+    pub fn save(&mut self, dbfile: &str, n_password: [u8; 32], master_key: Option<[u8; 32]>) -> Result<(), Error> {
         // Encode via bincode into a SecureBuffer (mlock'd, excluded from dumps)
         let encoded: Vec<u8> = bincode::encode_to_vec(&*self, config::standard())
             .map_err(|e| Error::Db(format!("Unable to save database: {}", e)))?;
@@ -141,7 +132,7 @@ impl NyxDb {
 
         // Decode
         let (mut db, _len): (NyxDb, usize) = bincode::decode_from_slice(&bytes[5..], config::standard())
-                .map_err(|e| Error::Db(format!("Unable to load database: {}", e)))?;
+            .map_err(|e| Error::Db(format!("Unable to load database: {}", e)))?;
 
         // Protect all files
         for (_, file) in db.files.iter_mut() {
@@ -180,17 +171,11 @@ impl NyxDb {
 
             // Check header
             if data.len() < 5 {
-                return Err(Error::Db(
-                    "This is not a valid Nyx database file.".to_string(),
-                ));
+                return Err(Error::Db("This is not a valid Nyx database file.".to_string()));
             } else if &data.as_slice()[0..4] != MAGIC_BYTES {
-                return Err(Error::Db(
-                    "This is not a valid Nyx database file.".to_string(),
-                ));
+                return Err(Error::Db("This is not a valid Nyx database file.".to_string()));
             } else if data[4] != VERSION && data[4] != 1 {
-                return Err(Error::Db(
-                    "This is not a valid Nyx database file.".to_string(),
-                ));
+                return Err(Error::Db("This is not a valid Nyx database file.".to_string()));
             }
             // data drops here: zeroized + munlock'd
             break;
@@ -291,7 +276,3 @@ impl Drop for NyxDb {
         self.zeroize();
     }
 }
-
-
-
-

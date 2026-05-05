@@ -33,18 +33,12 @@ impl CliCommand for CliSshKeyImport {
         let private_key = fs::read(&filename).unwrap();
 
         // Parse SSH key, get public key
-        let privkey =
-            PrivateKey::from_openssh(&String::from_utf8(private_key.clone())?).map_err(|_| {
-                CliError::Generic(
-                    "Invalid private key, please double check and try again.".to_string(),
-                )
-            })?;
-        let public_key = privkey.public_key().to_openssh().map_err(|e| {
-            CliError::Generic(format!(
-                "Unable to convert private SSH key to public: {}",
-                e
-            ))
-        })?;
+        let privkey = PrivateKey::from_openssh(&String::from_utf8(private_key.clone())?)
+            .map_err(|_| CliError::Generic("Invalid private key, please double check and try again.".to_string()))?;
+        let public_key = privkey
+            .public_key()
+            .to_openssh()
+            .map_err(|e| CliError::Generic(format!("Unable to convert private SSH key to public: {}", e)))?;
 
         // Get item info
         cli_header("Import SSH Key");
@@ -71,9 +65,7 @@ impl CliCommand for CliSshKeyImport {
             .map_err(|e| CliError::Generic(format!("Unable to serialize JSON object: {}", e)))?;
 
         // Create item
-        if let Err(e) =
-            rpc::send::<&String, bool>("ssh.import", &vec![&req.args[0].to_lowercase(), &key_str])
-        {
+        if let Err(e) = rpc::send::<&String, bool>("ssh.import", &vec![&req.args[0].to_lowercase(), &key_str]) {
             return Err(Error::Generic(format!("Unable to import SSH key: {}", e)).into());
         }
 
@@ -86,7 +78,7 @@ impl CliCommand for CliSshKeyImport {
         let mut help = CliHelpScreen::new(
             "Import SSH Key",
             "nyx ssh import <NAME> --file <PEM_FILE>",
-            "Imports a SSH key"
+            "Imports a SSH key",
         );
 
         help.add_param(

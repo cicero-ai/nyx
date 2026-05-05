@@ -7,9 +7,9 @@
 use crate::database::ProtectedFile;
 use crate::rpc;
 use falcon_cli::*;
-use std::{fs, env};
-use std::path::{Path, PathBuf};
 use std::os::unix::fs::PermissionsExt;
+use std::path::{Path, PathBuf};
+use std::{env, fs};
 
 #[derive(Default)]
 pub struct CliFileEdit {}
@@ -24,17 +24,19 @@ impl CliCommand for CliFileEdit {
         }
 
         let Some(fuse_dir) = crate::rpc::fs_launcher::get_mount_dir() else {
-            return Err(CliError::Generic("Unable to determine fuse mount dir.".to_string()).into())
+            return Err(CliError::Generic("Unable to determine fuse mount dir.".to_string()).into());
         };
 
         if !Path::new(&req.args[0]).exists() {
             return Err(CliError::InvalidParam(0, format!("File does not exist, {}", req.args[0])).into());
         }
 
-        let full_path = if let Ok(pbuf) = fs::canonicalize(&req.args[0]) && let Some(path_str) = pbuf.to_str() {
+        let full_path = if let Ok(pbuf) = fs::canonicalize(&req.args[0])
+            && let Some(path_str) = pbuf.to_str()
+        {
             path_str.to_string()
         } else {
-            return Err(CliError::InvalidParam(0, format!("File does not exist, {}", req.args[0])).into())
+            return Err(CliError::InvalidParam(0, format!("File does not exist, {}", req.args[0])).into());
         };
 
         if !full_path.starts_with(&fuse_dir) {
@@ -53,13 +55,15 @@ impl CliCommand for CliFileEdit {
         }
         println!();
 
-        cli_sendln!("Enter the the binaries that are allowed to access this file, one binary per-line (ie. gh, aws, claude).");   
+        cli_sendln!(
+            "Enter the the binaries that are allowed to access this file, one binary per-line (ie. gh, aws, claude)."
+        );
         let whitelist_vec = cli_get_multiline_input("Allowed Binaries");
 
         file.whitelist.clear();
         for app in whitelist_vec.split("\n") {
             let Some(binary) = self.which(app) else {
-                return Err(CliError::Generic(format!("Unable to find executable path of {}", app)).into())
+                return Err(CliError::Generic(format!("Unable to find executable path of {}", app)).into());
             };
             file.whitelist.push(binary);
         }
@@ -76,7 +80,11 @@ impl CliCommand for CliFileEdit {
     }
 
     fn help(&self) -> CliHelpScreen {
-        let mut help = CliHelpScreen::new("Edit Protected File", "nyx file edit <FILE>", "Edit file's allowed binaries.");
+        let mut help = CliHelpScreen::new(
+            "Edit Protected File",
+            "nyx file edit <FILE>",
+            "Edit file's allowed binaries.",
+        );
 
         help.add_param("FILE", "Protected file to edit, relative or absolute path.");
         help.add_example("nyx file edit config.yaml");
@@ -86,10 +94,15 @@ impl CliCommand for CliFileEdit {
 
 impl CliFileEdit {
     fn which(&self, binary: &str) -> Option<String> {
-
         if binary.contains('/') {
             let path = PathBuf::from(binary);
-            return if self.is_executable(&path) && let Some(res) = path.to_str() { Some(res.to_string()) } else { None };
+            return if self.is_executable(&path)
+                && let Some(res) = path.to_str()
+            {
+                Some(res.to_string())
+            } else {
+                None
+            };
         }
 
         let path_var = env::var_os("PATH")?;
@@ -98,7 +111,7 @@ impl CliFileEdit {
             if self.is_executable(&candidate) {
                 let pbuf = match candidate.canonicalize() {
                     Ok(r) => r,
-                    Err(_) => candidate
+                    Err(_) => candidate,
                 };
                 return Some(pbuf.to_str()?.to_string());
             }
@@ -108,11 +121,6 @@ impl CliFileEdit {
     }
 
     fn is_executable(&self, path: &Path) -> bool {
-        fs::metadata(path)
-            .map(|m| m.is_file() && (m.permissions().mode() & 0o111 != 0))
-            .unwrap_or(false)
+        fs::metadata(path).map(|m| m.is_file() && (m.permissions().mode() & 0o111 != 0)).unwrap_or(false)
     }
-
 }
-
-

@@ -32,11 +32,7 @@ impl CliCommand for CliOtpDelete {
     }
 
     fn help(&self) -> CliHelpScreen {
-        let mut help = CliHelpScreen::new(
-            "Delete OTP Entry",
-            "nyx otp rm <NAME>",
-            "Deletes an OTP entry",
-        );
+        let mut help = CliHelpScreen::new("Delete OTP Entry", "nyx otp rm <NAME>", "Deletes an OTP entry");
 
         help.add_param("NAME", "Name of the entry to delete.");
         help.add_example("nyx otp rm mysite/cloudflare");

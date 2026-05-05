@@ -58,11 +58,7 @@ impl CliCommand for CliOtpEdit {
     }
 
     fn help(&self) -> CliHelpScreen {
-        let mut help = CliHelpScreen::new(
-            "Edit OTP Entry",
-            "nyx otp edit <NAME>",
-            "Edit details of an OTP entry.",
-        );
+        let mut help = CliHelpScreen::new("Edit OTP Entry", "nyx otp edit <NAME>", "Edit details of an OTP entry.");
 
         help.add_param("NAME", "Name of the entry to edit.");
         help.add_example("nyx otp edit mysite/cloudflare");

@@ -7,31 +7,30 @@
 use super::{BaseDbFunctions, BaseDbItem};
 use crate::Error;
 use crate::rpc::fs_launcher::get_mount_dir;
-use crate::rpc::{CmdResponse, message, RpcTimer, TIMERS};
+use crate::rpc::{CmdResponse, RpcTimer, TIMERS, message};
+use bincode::{Decode, Encode};
 use chrono::Local;
 use nix::unistd::{getgid, getuid};
 use notify_rust::Notification;
-use bincode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs;
 use std::fs::OpenOptions;
 use std::io::Write;
-use std::path::{Path, PathBuf};
-use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
+use std::path::{Path, PathBuf};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 #[cfg(unix)]
 use std::os::unix::fs::symlink;
 
-#[cfg(any(target_os="linux", feature = "fuse"))]
+#[cfg(any(target_os = "linux", feature = "fuse"))]
 use fuser::{FileAttr, FileType, Request};
-#[cfg(any(target_os="linux", feature = "fuse"))]
-use std::time::{Duration, UNIX_EPOCH, SystemTime};
+#[cfg(any(target_os = "linux", feature = "fuse"))]
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 const MIN_FILES_PER_GROUP: usize = 3;
 const MAX_FILES_PER_GROUP: usize = 12;
-
 
 #[derive(Default, Encode, Decode)]
 pub struct FilesDb(pub HashMap<String, ProtectedFile>);
@@ -46,9 +45,8 @@ pub struct ProtectedFile {
     pub whitelist: Vec<String>,
 }
 
-#[cfg(any(target_os="linux", feature = "fuse"))]
+#[cfg(any(target_os = "linux", feature = "fuse"))]
 impl FilesDb {
-
     /// Check whether or not process is allowed to open file
     pub fn is_allowed(&self, req: &Request, file: &ProtectedFile) -> bool {
         if !file.is_protected || file.whitelist.is_empty() {
@@ -57,7 +55,7 @@ impl FilesDb {
 
         let exe = match fs::read_link(format!("/proc/{}/exe", req.pid())) {
             Ok(r) => r,
-            Err(_) => return false
+            Err(_) => return false,
         };
 
         if file.whitelist.iter().any(|b| Path::new(b) == exe) {
@@ -70,25 +68,28 @@ impl FilesDb {
 
     // Log unaithized  attempt
     fn log_unauthorized_attempt(&self, exe: &PathBuf, request: &Request, file: &ProtectedFile) {
-        let body = format!("The binary {:?} tried to access the protected file {}", exe, file.filename);
-        let _ = Notification::new()
-            .summary("Nyx - Unauthoeized File Access")
-            .body(&body)
-            .show();
+        let body = format!(
+            "The binary {:?} tried to access the protected file {}",
+            exe, file.filename
+        );
+        let _ = Notification::new().summary("Nyx - Unauthoeized File Access").body(&body).show();
 
         if let Some(mut log_path) = dirs::home_dir() {
             let time = Local::now();
-            let log_line = format!("[{}] {:?} (pid {}) tried  to open {}", time.format("%Y-%m-%d %H:%M:%S"), exe, request.pid(), file.filename);
-        log_path.push("nyx_unauthorized_access.log");
+            let log_line = format!(
+                "[{}] {:?} (pid {}) tried  to open {}",
+                time.format("%Y-%m-%d %H:%M:%S"),
+                exe,
+                request.pid(),
+                file.filename
+            );
+            log_path.push("nyx_unauthorized_access.log");
 
             if let Ok(mut log_file) = OpenOptions::new().append(true).create(true).open(log_path) {
                 let _ = writeln!(log_file, "{}", log_line);
             }
         }
-
     }
-
-
 
     /// Get attributes for file system
     pub fn get_attr(&self, ino: u64) -> Option<FileAttr> {
@@ -125,7 +126,6 @@ impl FilesDb {
         let fs_entry = self.values().find(|file| file.ino == ino)?;
         attr.size = fs_entry.contents.len() as u64;
 
-
         Some(attr)
     }
 
@@ -150,7 +150,6 @@ impl FilesDb {
             flags: 0,
         }
     }
-
 
     fn group_files(&self, paths: &[String]) -> Vec<String> {
         let mut groups: HashMap<String, Vec<String>> = HashMap::new();
@@ -223,10 +222,7 @@ impl FilesDb {
 
     fn count_paths_under(&self, prefix: &str, all_paths: &[String]) -> usize {
         let prefix_slash = format!("{}/", prefix);
-        all_paths
-            .iter()
-            .filter(|p| p.starts_with(&prefix_slash) || *p == prefix)
-            .count()
+        all_paths.iter().filter(|p| p.starts_with(&prefix_slash) || *p == prefix).count()
     }
 
     /// Freeze item
@@ -238,7 +234,7 @@ impl FilesDb {
 
         let hashes: Vec<String> = serde_json::from_str(&params[0])?;
         let Ok(minutes) = params[1].parse::<u64>() else {
-            return Err(Error::Generic(format!("Invalid minutes, {}", params[1])))
+            return Err(Error::Generic(format!("Invalid minutes, {}", params[1])));
         };
         let expires_at = SystemTime::now() + Duration::from_mins(minutes);
 
@@ -249,10 +245,12 @@ impl FilesDb {
 
         // ALl files
         if hashes[0].as_str() == "all" {
-            for (_, file) in self.iter_mut() { file.is_protected = false; }
+            for (_, file) in self.iter_mut() {
+                file.is_protected = false;
+            }
             timers.push(RpcTimer {
                 filename: "*".to_string(),
-                expires_at
+                expires_at,
             });
             return Ok(CmdResponse::new(true, false, message::ok(req_id, true)));
         }
@@ -261,27 +259,26 @@ impl FilesDb {
         for file_hash in hashes {
             let filename = match self.iter().find(|(_k, v)| v.file_hash == file_hash) {
                 Some((k, _v)) => k.clone(),
-                None => return Err(Error::Validate(format!("Hash does not exist, {}", file_hash)))
+                None => return Err(Error::Validate(format!("Hash does not exist, {}", file_hash))),
             };
 
             if let Some(file) = self.get_mut(&filename) {
                 file.is_protected = false;
                 timers.push(RpcTimer {
                     filename: filename.to_string(),
-                    expires_at
+                    expires_at,
                 });
             }
         }
 
         Ok(CmdResponse::new(true, false, message::ok(req_id, true)))
     }
-
 }
 
 impl BaseDbFunctions for FilesDb {
     type Item = ProtectedFile;
 
-    #[cfg(any(target_os="linux", feature = "fuse"))]
+    #[cfg(any(target_os = "linux", feature = "fuse"))]
     /// Add new protected file
     fn add_item(&mut self, req_id: usize, params: &Vec<String>) -> Result<CmdResponse, Error> {
         if params.is_empty() {
@@ -331,10 +328,9 @@ impl BaseDbFunctions for FilesDb {
                 continue;
             }
 
-
             let (filename, file) = match self.iter().find(|(_k, v)| v.file_hash == file_hash) {
                 Some((k, v)) => (k.clone(), v.clone()),
-                None => return Err(Error::Validate(format!("Hash does not exist, {}", file_hash)))
+                None => return Err(Error::Validate(format!("Hash does not exist, {}", file_hash))),
             };
 
             fs::remove_file(&file.filename)?;
@@ -359,10 +355,7 @@ impl BaseDbFunctions for FilesDb {
         if params.is_empty() {
             return Err(Error::Validate("Invalid parameters.".to_string()));
         } else if !self.contains_key(&params[0]) {
-            return Err(Error::Validate(format!(
-                "No entry to edit exists at, {}",
-                params[0]
-            )));
+            return Err(Error::Validate(format!("No entry to edit exists at, {}", params[0])));
         }
 
         // Decode JSON
@@ -385,7 +378,7 @@ impl BaseDbFunctions for FilesDb {
         // Get item
         let mut item = match self.iter().find(|(_k, v)| v.file_hash == params[0]) {
             Some((_k, v)) => v.clone(),
-            None => return Err(Error::Validate(format!("No entry exists at, {}", params[0])))
+            None => return Err(Error::Validate(format!("No entry exists at, {}", params[0]))),
         };
         item.contents.clear();
 
@@ -405,7 +398,6 @@ impl BaseDbFunctions for FilesDb {
         // Return
         Ok(CmdResponse::none(message::ok(req_id, res)))
     }
-
 }
 
 impl BaseDbItem for ProtectedFile {
@@ -449,5 +441,3 @@ impl Drop for FilesDb {
         self.zeroize();
     }
 }
-
-

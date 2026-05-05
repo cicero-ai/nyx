@@ -23,7 +23,7 @@ impl CliCommand for CliFileRestore {
         }
 
         let Some(fuse_dir) = crate::rpc::fs_launcher::get_mount_dir() else {
-            return Err(CliError::Generic("Unable to determine fuse mount dir.".to_string()).into())
+            return Err(CliError::Generic("Unable to determine fuse mount dir.".to_string()).into());
         };
 
         let mut hashes: Vec<String> = Vec::new();
@@ -35,10 +35,12 @@ impl CliCommand for CliFileRestore {
                 return Err(CliError::InvalidParam(idx, format!("File does not exist, {}", filename)).into());
             }
 
-            let full_path = if let Ok(pbuf) = fs::canonicalize(filename) && let Some(path_str) = pbuf.to_str() {
+            let full_path = if let Ok(pbuf) = fs::canonicalize(filename)
+                && let Some(path_str) = pbuf.to_str()
+            {
                 path_str.to_string()
             } else {
-                return Err(CliError::InvalidParam(idx, format!("File does not exist, {}", filename)).into())
+                return Err(CliError::InvalidParam(idx, format!("File does not exist, {}", filename)).into());
             };
 
             if !full_path.starts_with(&fuse_dir) {
@@ -53,9 +55,7 @@ impl CliCommand for CliFileRestore {
             .map_err(|e| CliError::Generic(format!("Unable to serialize JSON object: {}", e)))?;
 
         // Create item
-        if let Err(e) =
-            rpc::send::<&String, bool>("file.delete", &vec![&json_str])
-        {
+        if let Err(e) = rpc::send::<&String, bool>("file.delete", &vec![&json_str]) {
             return Err(Error::Generic(format!("Unable to restore file: {}", e)).into());
         }
 
@@ -71,7 +71,7 @@ impl CliCommand for CliFileRestore {
         let mut help = CliHelpScreen::new(
             "Restore File",
             "nyx restore <FILE>",
-            "Restore a previously protected file to its original unprotected state.\n\nNOTE: You may specify 'all' as the filename which will restore all protected files."
+            "Restore a previously protected file to its original unprotected state.\n\nNOTE: You may specify 'all' as the filename which will restore all protected files.",
         );
 
         help.add_param("FILE", "The file to restore, relative or absolute");

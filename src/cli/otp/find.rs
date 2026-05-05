@@ -36,11 +36,7 @@ impl CliCommand for CliOtpFind {
     }
 
     fn help(&self) -> CliHelpScreen {
-        let mut help = CliHelpScreen::new(
-            "Search OTP Entries",
-            "nyx otp find <TEXT>",
-            "Search all OTP entries",
-        );
+        let mut help = CliHelpScreen::new("Search OTP Entries", "nyx otp find <TEXT>", "Search all OTP entries");
 
         help.add_param("TEXT", "The text to search all entries for.");
         help.add_example("nyx otp find my-username");
