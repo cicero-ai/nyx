@@ -6,6 +6,7 @@
 
 pub use self::base::{BaseDbFunctions, BaseDbItem};
 pub use self::files::{FilesDb, ProtectedFile};
+#[cfg(any(target_os = "linux", feature = "fuse"))]
 pub use self::fs::NyxFs;
 pub use self::history::{HistoryAction, HistoryDataType, HistoryDb, HistoryItem};
 pub use self::loader::LoaderResponse;

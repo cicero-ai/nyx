@@ -49,7 +49,7 @@ notify-rust = "4.17.0"
 otpauth = "0.5.1"
 rand = "0.8.5"
 rsa = "0.9.8"
-serde = "1.0.228"
+serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
 sha2 = "0.10.9"
 ssh-agent-lib = "0.5.2"

@@ -22,7 +22,7 @@ pub mod launcher;
 pub mod message;
 mod ssh_agent;
 
-//#[cfg(any(target_os="linux", feature = "fuse"))]
+#[cfg(any(target_os="linux", feature = "fuse"))]
 pub mod fs_launcher;
 
 /// Send request
