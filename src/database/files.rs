@@ -276,6 +276,7 @@ impl FilesDb {
     }
 }
 
+    #[cfg(any(target_os = "linux", feature = "fuse"))]
 impl BaseDbFunctions for FilesDb {
     type Item = ProtectedFile;
 
@@ -401,6 +402,7 @@ impl BaseDbFunctions for FilesDb {
     }
 }
 
+    #[cfg(any(target_os = "linux", feature = "fuse"))]
 impl BaseDbItem for ProtectedFile {
     fn get_name(&self) -> String {
         self.filename.to_string()
