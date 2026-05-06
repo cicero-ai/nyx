@@ -8,10 +8,12 @@ use crate::Error;
 use zeroize::Zeroize;
 
 /// A heap-allocated buffer whose pages are mlock'd (never swapped to disk),
-/// marked MADV_DONTDUMP (excluded from core dumps), and zeroized on drop.
+/// marked MADV_DONTDUMP (excluded from core dumps, Linux only), and zeroized on drop.
 ///
 /// Use `SecureBuffer` for any transient plaintext: decrypted database bytes,
 /// bincode-encoded output before encryption, intermediate key material, etc.
+///
+/// On Windows, only zeroize-on-drop is applied (no mlock/madvise support).
 pub struct SecureBuffer {
     data: Vec<u8>,
 }
@@ -33,21 +35,27 @@ impl SecureBuffer {
         Ok(buf)
     }
 
-    /// Apply mlock + MADV_DONTDUMP to the buffer's pages.
+    /// Apply platform-specific memory protections.
     fn protect(&mut self) -> Result<(), Error> {
         if self.data.is_empty() {
             return Ok(());
         }
 
+        // Linux + macOS: mlock pages in RAM to prevent swapping to disk
         #[cfg(unix)]
-        unsafe {
-            // Lock pages in RAM -- prevents kernel from swapping to disk
-            let ret = libc::mlock(self.data.as_ptr() as *const libc::c_void, self.data.len());
+        {
+            let ret = unsafe {
+                libc::mlock(self.data.as_ptr() as *const libc::c_void, self.data.len())
+            };
             if ret != 0 {
                 return Err(std::io::Error::last_os_error().into());
             }
+        }
 
-            // Exclude from core dumps (belt-and-suspenders with prctl)
+        // Linux only: MADV_DONTDUMP excludes pages from core dumps.
+        // macOS does not support this flag.
+        #[cfg(target_os = "linux")]
+        unsafe {
             libc::madvise(
                 self.data.as_ptr() as *mut libc::c_void,
                 self.data.len(),
@@ -55,7 +63,19 @@ impl SecureBuffer {
             );
         }
 
+        // Windows: no mlock/madvise equivalent applied (zeroize-on-drop still active)
+
         Ok(())
+    }
+
+    /// Release mlock on the buffer's pages.
+    fn unprotect(&mut self) {
+        #[cfg(unix)]
+        if !self.data.is_empty() {
+            unsafe {
+                libc::munlock(self.data.as_ptr() as *const libc::c_void, self.data.len());
+            }
+        }
     }
 
     pub fn as_slice(&self) -> &[u8] {
@@ -69,13 +89,7 @@ impl SecureBuffer {
     /// Consume the SecureBuffer and return the inner Vec.
     /// The caller takes responsibility for the data; mlock is released.
     pub fn into_vec(mut self) -> Vec<u8> {
-        #[cfg(unix)]
-        if !self.data.is_empty() {
-            unsafe {
-                libc::munlock(self.data.as_ptr() as *const libc::c_void, self.data.len());
-            }
-        }
-
+        self.unprotect();
         // Take the data out so Drop doesn't zeroize it
         std::mem::take(&mut self.data)
     }
@@ -97,13 +111,7 @@ impl Drop for SecureBuffer {
     fn drop(&mut self) {
         // Zeroize first (while still locked in RAM), then unlock
         self.data.zeroize();
-
-        #[cfg(unix)]
-        if !self.data.is_empty() {
-            unsafe {
-                libc::munlock(self.data.as_ptr() as *const libc::c_void, self.data.len());
-            }
-        }
+        self.unprotect();
     }
 }
 
