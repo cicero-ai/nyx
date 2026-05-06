@@ -6,6 +6,7 @@
 
 use super::{BaseDbFunctions, BaseDbItem};
 use crate::Error;
+#[cfg(any(target_os = "linux", feature = "fuse"))]
 use crate::rpc::fs_launcher::get_mount_dir;
 use crate::rpc::{CmdResponse, RpcTimer, TIMERS, message};
 use bincode::{Decode, Encode};
