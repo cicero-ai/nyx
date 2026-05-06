@@ -10,7 +10,10 @@ use falcon_cli::*;
 use self::db::{
     CliDbBackup, CliDbChangePass, CliDbClose, CliDbCreate, CliDbHistory, CliDbOpen, CliDbRestore, CliDbStats,
 };
+
+    #[cfg(any(target_os = "linux", feature = "fuse"))]
 use self::file::{CliFileEdit, CliFileFreeze, CliFileList, CliFileProtect, CliFileRestore, CliFileScan};
+
 use self::note::{
     CliNoteCopy, CliNoteDelete, CliNoteEdit, CliNoteFind, CliNoteList, CliNoteNew, CliNoteRename, CliNoteShow,
     CliNoteXn,
