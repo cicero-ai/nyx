@@ -11,7 +11,6 @@ use crate::rpc::fs_launcher::get_mount_dir;
 use crate::rpc::{CmdResponse, RpcTimer, TIMERS, message};
 use bincode::{Decode, Encode};
 use chrono::Local;
-use nix::unistd::{getgid, getuid};
 use notify_rust::Notification;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -21,6 +20,9 @@ use std::io::Write;
 use std::ops::{Deref, DerefMut};
 use std::path::{Path, PathBuf};
 use zeroize::{Zeroize, ZeroizeOnDrop};
+
+#[cfg(any(target_os = "linux", feature = "fuse"))]
+use nix::unistd::{getgid, getuid};
 
 #[cfg(unix)]
 use std::os::unix::fs::symlink;
