@@ -11,7 +11,7 @@ use self::db::{
     CliDbBackup, CliDbChangePass, CliDbClose, CliDbCreate, CliDbHistory, CliDbOpen, CliDbRestore, CliDbStats,
 };
 
-    #[cfg(any(target_os = "linux", feature = "fuse"))]
+#[cfg(any(target_os = "linux", feature = "fuse"))]
 use self::file::{CliFileEdit, CliFileFreeze, CliFileList, CliFileProtect, CliFileRestore, CliFileScan};
 
 use self::note::{
@@ -37,6 +37,7 @@ use self::test::CliTest;
 
 pub mod clipboard;
 mod db;
+    #[cfg(any(target_os = "linux", feature = "fuse"))]
 mod file;
 mod note;
 mod otp;
