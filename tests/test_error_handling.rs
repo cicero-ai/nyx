@@ -2,8 +2,8 @@
 mod common;
 
 use assert_cmd::assert::OutputAssertExt;
-use predicates::prelude::*;
 use common::TestContext;
+use predicates::prelude::*;
 
 #[test]
 fn test_missing_database() {
@@ -69,9 +69,7 @@ fn test_show_nonexistent() {
     let mut cmd = ctx.cmd();
     cmd.arg("show").arg("doesnotexist");
 
-    cmd.assert()
-        .failure()
-        .stderr(predicate::str::contains("").or(predicate::str::is_empty().not()));
+    cmd.assert().failure().stderr(predicate::str::contains("").or(predicate::str::is_empty().not()));
 
     ctx.close_db();
 }
@@ -334,9 +332,7 @@ fn test_unicode_in_values() {
     let mut cmd = ctx.cmd();
     cmd.arg("get").arg("unicode_test");
 
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains("世界"));
+    cmd.assert().success().stdout(predicate::str::contains("世界"));
 
     ctx.close_db();
 }

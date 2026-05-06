@@ -2,8 +2,8 @@
 mod common;
 
 use assert_cmd::assert::OutputAssertExt;
-use predicates::prelude::*;
 use common::TestContext;
+use predicates::prelude::*;
 
 #[test]
 fn test_otp_new() {
@@ -89,9 +89,7 @@ fn test_otp_generate() {
     cmd.arg("otp").arg("testservice");
 
     // Should output a 6-digit code
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::is_match(r"\d{6}").unwrap());
+    cmd.assert().success().stdout(predicate::str::is_match(r"\d{6}").unwrap());
 
     ctx.close_db();
 }
@@ -164,9 +162,7 @@ fn test_otp_edit() {
     let mut cmd = ctx.cmd();
     cmd.arg("otp").arg("show").arg("editotp");
 
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains("updated.com"));
+    cmd.assert().success().stdout(predicate::str::contains("updated.com"));
 
     ctx.close_db();
 }
@@ -342,9 +338,7 @@ fn test_otp_categories() {
     let mut cmd = ctx.cmd();
     cmd.arg("otp").arg("ls").arg("work");
 
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains("aws"));
+    cmd.assert().success().stdout(predicate::str::contains("aws"));
 
     ctx.close_db();
 }

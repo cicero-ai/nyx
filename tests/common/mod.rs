@@ -1,4 +1,3 @@
-
 use std::path::Path;
 use std::process::{Command, Stdio};
 use std::thread;
@@ -56,12 +55,21 @@ impl TestContext {
         let output = child.wait_with_output().expect("Failed to wait for db create");
 
         if !output.status.success() {
-            panic!("Failed to create database:\nstdout: {}\nstderr: {}", String::from_utf8_lossy(&output.stdout), String::from_utf8_lossy(&output.stderr));
+            panic!(
+                "Failed to create database:\nstdout: {}\nstderr: {}",
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr)
+            );
         }
 
         // Check if database was created
         if !Path::new(&self.dbfile).exists() {
-            panic!("Database file was not created at {}!\nstdout: {}\nstderr: {}", self.dbfile, String::from_utf8_lossy(&output.stdout), String::from_utf8_lossy(&output.stderr));
+            panic!(
+                "Database file was not created at {}!\nstdout: {}\nstderr: {}",
+                self.dbfile,
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr)
+            );
         }
 
         // Verify daemon is running
@@ -82,18 +90,22 @@ impl TestContext {
             if attempt == 19 {
                 let last_check = check_cmd.output();
                 let (stdout, stderr) = if let Ok(out) = last_check {
-                    (String::from_utf8_lossy(&out.stdout).to_string(),
-                     String::from_utf8_lossy(&out.stderr).to_string())
+                    (
+                        String::from_utf8_lossy(&out.stdout).to_string(),
+                        String::from_utf8_lossy(&out.stderr).to_string(),
+                    )
                 } else {
                     ("N/A".to_string(), "N/A".to_string())
                 };
 
-                panic!("Daemon failed to start after database creation after {} attempts.\nDB exists: {}\nPort: {}\nLast stats check:\nstdout: {}\nstderr: {}",
+                panic!(
+                    "Daemon failed to start after database creation after {} attempts.\nDB exists: {}\nPort: {}\nLast stats check:\nstdout: {}\nstderr: {}",
                     attempt + 1,
-                    self.dbfile, 
+                    self.dbfile,
                     "",
                     stdout,
-                    stderr);
+                    stderr
+                );
             }
         }
     }
@@ -116,9 +128,12 @@ impl TestContext {
         let output = child.wait_with_output().expect("Failed to wait for nyx");
         check_for_password_error(&output, "db open");
 
-        assert!(output.status.success(), "Failed to open database:\nstdout: {}\nstderr: {}",
+        assert!(
+            output.status.success(),
+            "Failed to open database:\nstdout: {}\nstderr: {}",
             String::from_utf8_lossy(&output.stdout),
-            String::from_utf8_lossy(&output.stderr));
+            String::from_utf8_lossy(&output.stderr)
+        );
 
         // Give daemon time to start
         thread::sleep(Duration::from_millis(200));
@@ -171,7 +186,8 @@ pub fn check_for_password_error(output: &std::process::Output, context: &str) {
     let stderr = String::from_utf8_lossy(&output.stderr);
 
     if stdout.contains("Invalid password, please double check and try again.")
-        || stderr.contains("Invalid password, please double check and try again.") {
+        || stderr.contains("Invalid password, please double check and try again.")
+    {
         panic!(
             "Test failed: Invalid password prompt detected in {}\nstdout: {}\nstderr: {}",
             context, stdout, stderr

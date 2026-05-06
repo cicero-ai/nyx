@@ -2,8 +2,8 @@
 mod common;
 
 use assert_cmd::assert::OutputAssertExt;
-use predicates::prelude::*;
 use common::TestContext;
+use predicates::prelude::*;
 
 #[test]
 fn test_string_set() {
@@ -33,9 +33,7 @@ fn test_string_get() {
     let mut cmd = ctx.cmd();
     cmd.arg("get").arg("test_key");
 
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains("test_value_123"));
+    cmd.assert().success().stdout(predicate::str::contains("test_value_123"));
 
     ctx.close_db();
 }
@@ -84,9 +82,7 @@ fn test_string_update() {
     let mut cmd = ctx.cmd();
     cmd.arg("get").arg("update_test");
 
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains("updated_value"));
+    cmd.assert().success().stdout(predicate::str::contains("updated_value"));
 
     ctx.close_db();
 }
@@ -224,10 +220,7 @@ fn test_string_categories() {
     let mut cmd = ctx.cmd();
     cmd.arg("str").arg("ls");
 
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains("aws/"))
-        .stdout(predicate::str::contains("gcp/"));
+    cmd.assert().success().stdout(predicate::str::contains("aws/")).stdout(predicate::str::contains("gcp/"));
 
     // List aws category
     let mut cmd = ctx.cmd();
@@ -256,9 +249,7 @@ fn test_string_special_characters() {
     let mut cmd = ctx.cmd();
     cmd.arg("get").arg("special");
 
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains(special_value));
+    cmd.assert().success().stdout(predicate::str::contains(special_value));
 
     ctx.close_db();
 }
@@ -296,9 +287,7 @@ fn test_string_long_value() {
     let mut cmd = ctx.cmd();
     cmd.arg("get").arg("long_key");
 
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains(&long_value));
+    cmd.assert().success().stdout(predicate::str::contains(&long_value));
 
     ctx.close_db();
 }

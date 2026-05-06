@@ -2,8 +2,8 @@
 mod common;
 
 use assert_cmd::assert::OutputAssertExt;
-use predicates::prelude::*;
 use common::TestContext;
+use predicates::prelude::*;
 use std::fs;
 
 #[test]
@@ -20,10 +20,10 @@ fn test_ssh_generate() {
     use std::io::Write;
     if let Some(mut stdin) = child.stdin.take() {
         writeln!(stdin, "server1.example.com").ok(); // host
-        writeln!(stdin, "22").ok();                   // port
-        writeln!(stdin, "ubuntu").ok();               // username
-        writeln!(stdin, "").ok();                     // password (optional)
-        writeln!(stdin, "Test SSH key").ok();         // notes
+        writeln!(stdin, "22").ok(); // port
+        writeln!(stdin, "ubuntu").ok(); // username
+        writeln!(stdin, "").ok(); // password (optional)
+        writeln!(stdin, "Test SSH key").ok(); // notes
     }
 
     let status = child.wait().expect("Failed to wait");
@@ -184,10 +184,7 @@ fn test_ssh_edit() {
     let mut cmd = ctx.cmd();
     cmd.arg("ssh").arg("show").arg("editkey");
 
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains("updated.com"))
-        .stdout(predicate::str::contains("2222"));
+    cmd.assert().success().stdout(predicate::str::contains("updated.com")).stdout(predicate::str::contains("2222"));
 
     ctx.close_db();
 }
@@ -340,9 +337,7 @@ fn test_ssh_find() {
     let mut cmd = ctx.cmd();
     cmd.arg("ssh").arg("find").arg("aws");
 
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains("aws_server"));
+    cmd.assert().success().stdout(predicate::str::contains("aws_server"));
 
     ctx.close_db();
 }
@@ -372,9 +367,7 @@ fn test_ssh_categories() {
     let mut cmd = ctx.cmd();
     cmd.arg("ssh").arg("ls").arg("production");
 
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains("webserver"));
+    cmd.assert().success().stdout(predicate::str::contains("webserver"));
 
     ctx.close_db();
 }

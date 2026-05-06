@@ -51,7 +51,13 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
+          toolchain: stable  
           targets: ${{ matrix.target }}
+
+      - name: Update dependencies
+        run: cargo update
+
+
 
       - name: Install cross-compilation tools (Linux ARM64)
         if: matrix.target == 'aarch64-unknown-linux-musl'
@@ -65,6 +71,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y musl-tools
+
+      - name: Update dependencies
+        run: cargo update
+
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
       - name: Create release archive

@@ -2,8 +2,8 @@
 mod common;
 
 use assert_cmd::assert::OutputAssertExt;
-use predicates::prelude::*;
 use common::TestContext;
+use predicates::prelude::*;
 
 #[test]
 fn test_user_new() {
@@ -136,9 +136,7 @@ fn test_user_edit() {
     let mut cmd = ctx.cmd();
     cmd.arg("show").arg("edituser");
 
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains("updated_username"));
+    cmd.assert().success().stdout(predicate::str::contains("updated_username"));
 
     ctx.close_db();
 }
@@ -332,18 +330,13 @@ fn test_user_categories() {
     let mut cmd = ctx.cmd();
     cmd.arg("ls");
 
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains("work/"))
-        .stdout(predicate::str::contains("personal/"));
+    cmd.assert().success().stdout(predicate::str::contains("work/")).stdout(predicate::str::contains("personal/"));
 
     // List work category
     let mut cmd = ctx.cmd();
     cmd.arg("ls").arg("work");
 
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains("gitlab"));
+    cmd.assert().success().stdout(predicate::str::contains("gitlab"));
 
     ctx.close_db();
 }
