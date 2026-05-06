@@ -211,6 +211,7 @@ impl RpcDaemon {
             ("file", "delete") => db.files.delete_item(req.id, &req.params),
             #[cfg(any(target_os = "linux", feature = "fuse"))]
             ("file", "edit") => db.files.edit_item(req.id, &req.params),
+            #[cfg(any(target_os = "linux", feature = "fuse"))]
             ("file", "exists") => db.files.exists(req.id, &req.params),
             #[cfg(any(target_os = "linux", feature = "fuse"))]
             ("file", "freeze") => db.files.freeze_item(req.id, &req.params),
