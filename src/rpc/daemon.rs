@@ -207,12 +207,18 @@ impl RpcDaemon {
             ("note", "rename") => db.notes.rename_item(req.id, &req.params),
 
             // Files
+            #[cfg(any(target_os = "linux", feature = "fuse"))]
             ("file", "delete") => db.files.delete_item(req.id, &req.params),
+            #[cfg(any(target_os = "linux", feature = "fuse"))]
             ("file", "edit") => db.files.edit_item(req.id, &req.params),
             ("file", "exists") => db.files.exists(req.id, &req.params),
+            #[cfg(any(target_os = "linux", feature = "fuse"))]
             ("file", "freeze") => db.files.freeze_item(req.id, &req.params),
+            #[cfg(any(target_os = "linux", feature = "fuse"))]
             ("file", "get") => db.files.get_item(req.id, &req.params),
+            #[cfg(any(target_os = "linux", feature = "fuse"))]
             ("file", "list") => db.files.list_items(req.id, &req.params),
+            #[cfg(any(target_os = "linux", feature = "fuse"))]
             ("file", "new") => db.files.add_item(req.id, &req.params),
 
             _ => Ok(CmdResponse::none(message::err(
